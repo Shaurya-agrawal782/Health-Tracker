@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+node_modules/
+__pycache__/
+*.pem
+*.key
+*.p12
+credentials.json
+serviceAccount*.json
+secrets.json
+secrets.yaml
+secrets.yml
