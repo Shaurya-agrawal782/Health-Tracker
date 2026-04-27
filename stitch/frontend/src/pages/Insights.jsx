@@ -4,6 +4,7 @@ import RiskGauge from '../components/dashboard/RiskGauge';
 import { FiAlertCircle, FiInfo, FiPlusCircle, FiCheckCircle, FiChevronRight, FiActivity, FiHeart, FiStar } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import HealthMap from '../components/dashboard/HealthMap';
+import EmergencyLocator from '../components/dashboard/EmergencyLocator';
 
 const Insights = () => {
   const [risk, setRisk] = useState(null);
@@ -248,6 +249,11 @@ const Insights = () => {
             <div style={{ marginTop: '12px', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
               Last assessed: {new Date(risk.assessedAt).toLocaleString()}
             </div>
+          )}
+
+          {/* EMERGENCY LOCATOR: Triggers when risk is High */}
+          {risk.level === 'High' && (
+            <EmergencyLocator />
           )}
         </div>
 

@@ -20,16 +20,20 @@ const DashboardLayout = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Premium Glass Header */}
-      <header className="glass-panel" style={{
-        padding: '12px 40px',
+      {/* Premium Floating Header */}
+      <header style={{
+        padding: '16px 40px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        marginBottom: '32px'
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid #f1f5f9',
+        marginBottom: '32px',
+        boxShadow: '0 2px 15px rgba(0,0,0,0.03)'
       }}>
         <Link to="/dashboard" style={{
           textDecoration: 'none',
@@ -55,8 +59,15 @@ const DashboardLayout = () => {
           <span className="gradient-text">VitalIQ</span>
         </Link>
 
-        {/* Center: Nav links */}
-        <nav style={{ display: 'flex', gap: '8px' }} className="dash-nav-desktop">
+        {/* Center: Premium Nav Pill */}
+        <nav style={{ 
+          display: 'flex', 
+          gap: '4px',
+          background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+          padding: '6px',
+          borderRadius: 'var(--radius-xl)',
+          boxShadow: '0 8px 25px rgba(13, 148, 136, 0.15)'
+        }} className="dash-nav-desktop">
           {navItems.map(item => (
             <NavLink 
               key={item.path} 
@@ -65,18 +76,18 @@ const DashboardLayout = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '10px 18px',
-                borderRadius: 'var(--radius-md)',
-                fontSize: '0.9rem',
-                fontWeight: 600,
+                padding: '8px 20px',
+                borderRadius: 'var(--radius-lg)',
+                fontSize: '0.85rem',
+                fontWeight: 700,
                 textDecoration: 'none',
-                color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
-                background: isActive ? 'var(--primary-50)' : 'transparent',
-                transition: 'var(--transition-fast)',
-                border: isActive ? '1px solid var(--primary-100)' : '1px solid transparent'
+                color: isActive ? 'var(--primary)' : 'rgba(255,255,255,0.85)',
+                background: isActive ? 'white' : 'transparent',
+                transition: 'all var(--transition-base)',
+                boxShadow: isActive ? '0 4px 10px rgba(0,0,0,0.1)' : 'none'
               })}
             >
-              {item.icon}
+              <span style={{ display: 'flex', alignItems: 'center' }}>{item.icon}</span>
               {item.label}
             </NavLink>
           ))}

@@ -112,12 +112,13 @@ const AIAssistant = () => {
       {/* Header */}
       <div style={{
         padding: '16px 20px',
-        background: 'var(--primary-gradient)',
+        background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
         color: 'white',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
       }} onClick={() => setIsMinimized(!isMinimized)}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{

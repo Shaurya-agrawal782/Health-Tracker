@@ -1,125 +1,89 @@
-# 🏥 Stitch Health — AI-Driven Predictive Healthcare Platform
+# 🚀 VitalIQ — AI-Driven Predictive Healthcare Platform
 
-A full-stack MERN application that helps users track their lifestyle, receive AI-powered health risk predictions, and get personalized wellness recommendations.
+VitalIQ is a cutting-edge MERN-stack platform designed to revolutionize personal healthcare. By leveraging AI-driven analytics, real-time geospatial tracking, and personalized coaching, VitalIQ empowers users to stay ahead of health risks and optimize their wellness journey.
 
-## 🏗️ Architecture
+## ✨ Key Features
 
-```
-Frontend (React + Vite)  →  REST API  →  Backend (Node + Express)  →  MongoDB
-                                              ↓
-                                    ML Model (Future - Python/Flask)
-```
+- **🧠 AI Health Screening**: Advanced risk prediction engine that analyzes lifestyle factors (sleep, stress, activity) to provide a comprehensive health score and confidence level.
+- **🗺️ Interactive Regional Health Map**: A Leaflet-powered geospatial dashboard showing live health alerts, air quality warnings, and vaccination camps in your vicinity.
+- **🚨 Emergency Medical Locator**: Automatic detection of "High Risk" status with instant links to the nearest hospitals and emergency services via Google Maps.
+- **🤖 VitalIQ AI Coach**: A persistent, intelligent chat assistant powered by Gemini AI to answer wellness questions and provide personalized health advice.
+- **📊 Dynamic Insights**: Real-time visualization of health trends, weekly averages, and actionable recommendations.
+- **🏆 Gamified Leaderboard**: Compete with friends on health metrics and earn reward points for maintaining a healthy streak.
 
-## 🚀 Quick Start
+## 🛠️ Technology Stack
+
+- **Frontend**: React 19, Vite, Vanilla CSS, React-Leaflet
+- **Backend**: Node.js, Express
+- **Database**: MongoDB
+- **AI Engine**: Google Gemini AI (for Health Coaching & Insights)
+- **Deployment**: Render (Auto-deploy on Git push)
+
+## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js v18+
-- MongoDB (local or Atlas)
+- MongoDB instance (Local or Atlas)
+- Google Gemini API Key
 
-### Backend Setup
-```bash
-cd backend
-npm install
-# Edit .env with your MongoDB URI
-npm run dev
-```
+### Installation
 
-### Frontend Setup
-```bash
-cd frontend
-npm install
-npm run dev
-```
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Shaurya-agrawal782/Health-Tracker.git
+   cd Health-Tracker
+   ```
 
-The frontend runs on `http://localhost:5173` and proxies API calls to `http://localhost:5000`.
+2. **Backend Setup**
+   ```bash
+   cd backend
+   npm install
+   # Create a .env file based on your environment
+   npm run dev
+   ```
 
-## 📡 API Endpoints
+3. **Frontend Setup**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | ❌ | Create account |
-| POST | `/api/auth/login` | ❌ | Login + JWT |
-| GET | `/api/auth/profile` | ✅ | Get user profile |
-| POST | `/api/health/add` | ✅ | Log daily health data |
-| GET | `/api/health/history` | ✅ | Paginated health history |
-| GET | `/api/health/latest` | ✅ | Latest health entry |
-| GET | `/api/health/risk` | ✅ | Risk assessment (rule-based) |
-| GET | `/api/health/summary` | ✅ | Aggregated stats + trends |
-| GET | `/api/recommendations` | ✅ | Personalized health advice |
+## 🌐 Deployment (Render)
 
-## 🧠 Risk Prediction (Rule-Based → ML-Ready)
+VitalIQ is optimized for deployment on **Render**.
 
-Currently uses a deterministic rule engine that scores risk factors:
+### To update your deployment:
+1. **Push to GitHub**: Any push to the `main` branch will trigger an automatic rebuild on Render.
+   ```bash
+   git add .
+   git commit -m "Upgrade: VitalIQ Platform - AI Insights, Interactive Health Map, and Premium UI Fixes"
+   git push origin main
+   ```
+2. **Environment Variables**: Ensure the following variables are set in your Render dashboard:
+   - `MONGODB_URI`
+   - `JWT_SECRET`
+   - `GEMINI_API_KEY`
+   - `FRONTEND_URL` (Set to your Render frontend URL for CORS)
 
-| Factor | Max Impact |
-|--------|-----------|
-| Sleep deficit | +25% |
-| High stress | +25% |
-| Low exercise | +20% |
-| High BMI | +15% |
-| Smoking | +15% |
-| Alcohol | +10% |
-| Poor diet | +10% |
-| Low steps | +10% |
-| Low water | +5% |
-
-**Output format matches ML API response:**
-```json
-{
-  "level": "High",
-  "score": 72,
-  "confidence": 0.87,
-  "factors": [...],
-  "explanation": "Key risk drivers: Critical Sleep Deficit + Extreme Stress + Smoking"
-}
-```
-
-## 🤖 ML Integration (Future)
-
-The architecture is designed for drop-in ML model replacement:
-
-```javascript
-// Current: Rule-based (backend/utils/riskCalculator.js)
-const risk = calculateRisk(healthData, user);
-
-// Future: ML API call
-const risk = await fetch('http://ml-service:8000/predict-risk', {
-  method: 'POST',
-  body: JSON.stringify({ sleep, activity, diet, stress })
-});
-```
-
-## 🛡️ Security
-
-- JWT Authentication with Bearer tokens
-- Password hashing with bcrypt (10 rounds)
-- Input validation with express-validator
-- Protected routes (frontend + backend)
-- Environment variables for secrets
+### Troubleshooting
+- **CORS Errors**: If you encounter CORS issues, ensure your Render frontend URL is added to the `allowedOrigins` in `backend/app.js`.
+- **Build Failures**: Check the **Logs** tab in Render. Common issues include missing dependencies (ensure `npm install` runs in both directories).
 
 ## 📁 Project Structure
 
 ```
 stitch/
-├── backend/
-│   ├── config/          # Database connection
-│   ├── controllers/     # Route handlers
-│   ├── middleware/       # Auth middleware
-│   ├── models/          # Mongoose schemas
-│   ├── routes/          # API routes
-│   ├── utils/           # Risk calculator + recommendation engine
-│   ├── app.js           # Express app
-│   └── server.js        # Entry point
-├── frontend/
-│   └── src/
-│       ├── components/  # UI + dashboard + layout
-│       ├── context/     # Auth context
-│       ├── pages/       # Route pages
-│       ├── services/    # API client
-│       └── App.jsx      # Router
+├── backend/            # Express Server, Routes, Controllers, Models, Utils
+├── frontend/           # React Frontend (Vite)
+│   ├── src/components/ # Reusable UI components (Layout, Dashboard, Maps)
+│   ├── src/pages/      # Feature pages (Insights, History, Screening)
+│   └── src/services/   # API communication logic (Gemini & Health API)
 └── README.md
 ```
 
-## 👥 Team
+## 👥 Contributors
+Built with ❤️ for the Hackathon by Shaurya Agrawal.
 
-Built for hackathon by Team Stitch 🧵
+---
+**VitalIQ** — *Your Health, Predicted.*

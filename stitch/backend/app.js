@@ -10,21 +10,32 @@ const predictRoutes = require('./routes/predict.routes');
 const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://127.0.0.1:5173',
   'http://localhost:3000',
-  process.env.FRONTEND_URL
-].filter(Boolean);
+  'http://127.0.0.1:3000'
+];
+
+// Add process.env.FRONTEND_URL if it exists
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
 
 // Middleware 
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow non-browser requests and configured frontend origins.
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      callback(null, true);
+    } else {
+      console.log('🚫 CORS blocked for origin:', origin);
+      callback(new Error('Not allowed by CORS'));
     }
-
-    return callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
