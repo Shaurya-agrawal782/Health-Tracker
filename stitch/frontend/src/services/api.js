@@ -22,7 +22,9 @@ API.interceptors.request.use((config) => {
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Only redirect if we are NOT already on the login page
+    // This prevents clearing the error message during a failed login attempt
+    if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
       localStorage.removeItem('vitaliq_token');
       localStorage.removeItem('vitaliq_user');
       window.location.href = '/login';
