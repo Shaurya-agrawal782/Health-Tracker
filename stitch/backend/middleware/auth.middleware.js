@@ -15,6 +15,20 @@ const protect = async (req, res, next) => {
     });
   }
 
+  // Handle Guest & Mock Google Access for Hackathon Demo
+  const mockTokens = ['vitaliq_guest_access_token', 'mock_google_token'];
+  if (mockTokens.includes(token)) {
+    req.user = {
+      _id: '69efa1ed47cbbb02c162bb28', // Using a valid User ID from DB
+      name: token === 'mock_google_token' ? 'Google Explorer' : 'Guest Explorer',
+      email: token === 'mock_google_token' ? 'google-user@example.com' : 'guest@vitaliq.ai',
+      role: 'guest',
+      points: 0,
+      currentStreak: 0
+    };
+    return next();
+  }
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = await User.findById(decoded.id);

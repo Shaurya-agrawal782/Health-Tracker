@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiHeart } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import OtpVerification from '../components/auth/OtpVerification';
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, sendRegisterOtp } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -28,21 +30,47 @@ const Register = () => {
     setLoading(true);
 
     try {
+      // Step 1: Send OTP to verify email
+      await sendRegisterOtp(formData.email);
+      setShowOtp(true);
+      toast.success('Please verify your email to complete registration.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpVerify = async (otpValue) => {
+    try {
       const payload = {
         ...formData,
+        otp: otpValue,
         age: parseInt(formData.age),
         height: parseFloat(formData.height),
         weight: parseFloat(formData.weight)
       };
       await register(payload);
-      toast.success('Account created successfully!');
+      toast.success('Welcome to VitalIQ! Account created.');
       navigate('/dashboard');
     } catch (err) {
-      toast.error(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Registration failed');
-    } finally {
-      setLoading(false);
+      throw err;
     }
   };
+
+  if (showOtp) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: '20px' }}>
+        <div className="animate-fade-in-scale" style={{ background: 'white', borderRadius: '24px', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', padding: '48px 40px', width: '100%', maxWidth: '440px' }}>
+          <OtpVerification 
+            email={formData.email} 
+            onVerify={handleOtpVerify} 
+            onBack={() => setShowOtp(false)} 
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -171,7 +199,7 @@ const Register = () => {
             {loading ? (
               <span className="spinner" style={{ width: '20px', height: '20px', borderWidth: '2px' }} />
             ) : (
-              'Create Account'
+              'Verify & Create Account'
             )}
           </button>
         </form>

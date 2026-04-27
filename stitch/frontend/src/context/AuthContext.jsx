@@ -29,14 +29,21 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
+    // In a real app, this would call the API to check credentials and send OTP
     const response = await authAPI.login({ email, password });
-    const { token: newToken, user: userData } = response.data;
+    // We return the data but DON'T set the state yet (waiting for OTP)
+    return response.data;
+  };
 
-    localStorage.setItem('vitaliq_token', newToken);
+  const completeLogin = (userData, tokenData) => {
+    localStorage.setItem('vitaliq_token', tokenData);
     localStorage.setItem('vitaliq_user', JSON.stringify(userData));
-    setToken(newToken);
+    setToken(tokenData);
     setUser(userData);
+  };
 
+  const sendRegisterOtp = async (email) => {
+    const response = await authAPI.sendRegisterOtp({ email });
     return response.data;
   };
 
@@ -52,11 +59,35 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const loginAsGuest = () => {
+    const guestUser = {
+      _id: 'guest_123',
+      name: 'Guest Explorer',
+      email: 'guest@vitaliq.ai',
+      role: 'guest'
+    };
+    const guestToken = 'vitaliq_guest_access_token';
+
+    localStorage.setItem('vitaliq_token', guestToken);
+    localStorage.setItem('vitaliq_user', JSON.stringify(guestUser));
+    setToken(guestToken);
+    setUser(guestUser);
+  };
+
   const logout = () => {
     localStorage.removeItem('vitaliq_token');
     localStorage.removeItem('vitaliq_user');
     setToken(null);
     setUser(null);
+  };
+
+  const verifyOtp = async (email, otp) => {
+    try {
+      const response = await authAPI.verifyOtp({ email, otp });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Verification failed');
+    }
   };
 
   const isAuthenticated = !!token && !!user;
@@ -69,7 +100,11 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated,
       login,
       register,
-      logout
+      logout,
+      loginAsGuest,
+      verifyOtp,
+      completeLogin,
+      sendRegisterOtp
     }}>
       {children}
     </AuthContext.Provider>

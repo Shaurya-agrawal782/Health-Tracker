@@ -26,13 +26,15 @@ VitalIQ is a cutting-edge MERN-stack platform designed to revolutionize personal
 - MongoDB instance (Local or Atlas)
 - Google Gemini API Key
 
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/Shaurya-agrawal782/Health-Tracker.git
-   cd Health-Tracker
-   ```
+### 🔑 Getting your Google Client ID (Free)
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project.
+3. Navigate to **APIs & Services > Credentials**.
+4. Click **Create Credentials > OAuth client ID**.
+5. Select **Web application** as the application type.
+6. Add `http://localhost:5173` to **Authorized JavaScript origins**.
+7. Click **Create** and copy your **Client ID**.
+8. Paste it into your `.env` file as `VITE_GOOGLE_CLIENT_ID`.
 
 2. **Backend Setup**
    ```bash

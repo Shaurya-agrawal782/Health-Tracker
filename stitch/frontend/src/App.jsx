@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Pages
 import Landing from './pages/Landing';
@@ -82,7 +83,13 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
-          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/login" element={
+            <PublicRoute>
+              <GoogleOAuthProvider clientId="762575410029-k5unfs899v0qavjc5vf4ni4lb0tk63cp.apps.googleusercontent.com">
+                <Login />
+              </GoogleOAuthProvider>
+            </PublicRoute>
+          } />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
           {/* Protected Dashboard Routes */}
