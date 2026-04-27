@@ -1,6 +1,7 @@
 const HealthData = require('../models/HealthData');
 const User = require('../models/User');
 const { calculateRisk, calculateBMI, getBMICategory } = require('../utils/riskCalculator');
+const geminiService = require('../services/geminiService');
 
 // @desc    Add health data entry
 // @route   POST /api/health/add
@@ -30,6 +31,47 @@ exports.addHealthData = async (req, res) => {
       data: healthEntry,
       message: 'Health data logged successfully'
     });
+
+    // Update User points and streaks in background
+    try {
+      const user = await User.findById(req.user._id);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const lastLogged = user.lastLoggedAt ? new Date(user.lastLoggedAt) : null;
+      if (lastLogged) lastLogged.setHours(0, 0, 0, 0);
+
+      // Award daily points (50 pts)
+      let pointsAwarded = 50;
+      
+      // Update streak
+      if (!lastLogged) {
+        user.currentStreak = 1;
+      } else {
+        const diffTime = Math.abs(today - lastLogged);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1) {
+          // Consecutive day
+          user.currentStreak += 1;
+          pointsAwarded += (user.currentStreak * 10); // Bonus for streak
+        } else if (diffDays > 1) {
+          // Streak broken
+          user.currentStreak = 1;
+        }
+        // If diffDays === 0, already logged today, no streak change
+      }
+
+      if (user.currentStreak > user.longestStreak) {
+        user.longestStreak = user.currentStreak;
+      }
+
+      user.points += pointsAwarded;
+      user.lastLoggedAt = new Date();
+      await user.save();
+    } catch (streakError) {
+      console.error('Streak update error:', streakError);
+    }
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -107,9 +149,60 @@ exports.getRisk = async (req, res) => {
     }
 
     const user = await User.findById(req.user._id);
-    const riskResult = calculateRisk(latest, user);
+    
+    // Try Gemini AI first
+    let riskResult = await geminiService.analyzeHealth(latest, user);
+    
+    // Fallback to rule-based if Gemini fails or is not configured
+    if (!riskResult) {
+      console.log('🔄 Falling back to rule-based risk calculation');
+      riskResult = calculateRisk(latest, user);
+      riskResult.aiGenerated = false;
+    } else {
+      riskResult.aiGenerated = true;
+    }
 
     res.json({ success: true, data: riskResult });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Chat with AI Health Coach
+// @route   POST /api/health/chat
+exports.chatWithCoach = async (req, res) => {
+  try {
+    const { messages } = req.body;
+    
+    // Fetch user context for better AI response
+    const user = await User.findById(req.user._id);
+    const latestHealth = await HealthData.findOne({ userId: req.user._id }).sort({ date: -1 });
+    
+    const context = {
+      user: {
+        name: user.name,
+        age: user.age,
+        weight: user.weight,
+        height: user.height,
+        gender: user.gender
+      },
+      latestHealth: latestHealth ? {
+        date: latestHealth.date,
+        steps: latestHealth.steps,
+        sleep: latestHealth.sleepHours,
+        stress: latestHealth.stressLevel
+      } : null
+    };
+
+    const response = await geminiService.chatWithCoach(messages, context);
+    
+    res.json({
+      success: true,
+      data: {
+        role: 'assistant',
+        content: response
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

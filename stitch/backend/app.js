@@ -37,7 +37,7 @@ app.use('/api/predict', predictRoutes);
 
 // Health check
 app.get('/api/ping', (req, res) => {
-  res.json({ status: 'ok', message: 'Stitch Health API is running 🏥' });
+  res.json({ status: 'ok', message: 'VitalIQ Health API is running 🏥' });
 });
 
 // Global error handler

@@ -142,7 +142,7 @@ const MedicalHistory = () => {
                 const riskLevel = check.overallRisk?.level || 'Low';
                 
                 return (
-                  <tr key={check._id || i} className="animate-fade-in-up" style={{ opacity: 0 }}>
+                  <tr key={check._id || i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <FiCalendar size={13} color="var(--text-muted)" />

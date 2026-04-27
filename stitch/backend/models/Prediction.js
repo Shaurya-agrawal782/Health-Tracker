@@ -50,10 +50,12 @@ const predictionSchema = new mongoose.Schema({
   overallRisk: {
     level: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Low' },
     score: { type: Number, default: 0 },
-    confidence: { type: Number, default: 0 }
+    confidence: { type: Number, default: 0 },
+    explanation: { type: String, default: '' }
   },
   symptoms: [String],
   recommendations: [String],
+  aiGenerated: { type: Boolean, default: false },
   status: {
     type: String,
     enum: ['completed', 'pending', 'failed'],

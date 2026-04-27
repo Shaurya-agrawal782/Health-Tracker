@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 5000;
 // Connect to database then start server
 connectDB().then(() => {
   app.listen(PORT, () => {
-    console.log(`🚀 Stitch Health API running on port ${PORT}`);
+    console.log(`🚀 VitalIQ Health API running on port ${PORT}`);
     console.log(`📍 http://localhost:${PORT}/api/ping`);
   });
 });

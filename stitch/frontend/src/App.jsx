@@ -14,6 +14,8 @@ import HealthResults from './pages/HealthResults';
 import MedicalHistory from './pages/MedicalHistory';
 import Insights from './pages/Insights';
 import Recommendations from './pages/Recommendations';
+import MealPlanner from './pages/MealPlanner';
+import Leaderboard from './pages/Leaderboard';
 
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -90,6 +92,8 @@ function App() {
             <Route path="/health-check" element={<HealthCheckForm />} />
             <Route path="/analyzing" element={<AnalyzingResults />} />
             <Route path="/results/:id" element={<HealthResults />} />
+            <Route path="/meal-planner" element={<MealPlanner />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/history" element={<MedicalHistory />} />
             <Route path="/insights" element={<Insights />} />
             <Route path="/recommendations" element={<Recommendations />} />

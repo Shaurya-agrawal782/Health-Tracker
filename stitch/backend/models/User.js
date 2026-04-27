@@ -44,6 +44,21 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Weight is required'],
     min: 10,
     max: 500
+  },
+  points: {
+    type: Number,
+    default: 0
+  },
+  currentStreak: {
+    type: Number,
+    default: 0
+  },
+  longestStreak: {
+    type: Number,
+    default: 0
+  },
+  lastLoggedAt: {
+    type: Date
   }
 }, {
   timestamps: true

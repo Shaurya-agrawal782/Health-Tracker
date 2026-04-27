@@ -50,7 +50,10 @@ exports.register = [
           age: user.age,
           gender: user.gender,
           height: user.height,
-          weight: user.weight
+          weight: user.weight,
+          points: user.points,
+          currentStreak: user.currentStreak,
+          longestStreak: user.longestStreak
         }
       });
     } catch (error) {
@@ -101,7 +104,10 @@ exports.login = [
           age: user.age,
           gender: user.gender,
           height: user.height,
-          weight: user.weight
+          weight: user.weight,
+          points: user.points,
+          currentStreak: user.currentStreak,
+          longestStreak: user.longestStreak
         }
       });
     } catch (error) {
@@ -125,6 +131,9 @@ exports.getProfile = async (req, res) => {
         gender: user.gender,
         height: user.height,
         weight: user.weight,
+        points: user.points,
+        currentStreak: user.currentStreak,
+        longestStreak: user.longestStreak,
         createdAt: user.createdAt
       }
     });

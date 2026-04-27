@@ -18,8 +18,8 @@ export const AuthProvider = ({ children }) => {
 
   // Load from localStorage on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('stitch_token');
-    const storedUser = localStorage.getItem('stitch_user');
+    const storedToken = localStorage.getItem('vitaliq_token');
+    const storedUser = localStorage.getItem('vitaliq_user');
 
     if (storedToken && storedUser) {
       setToken(storedToken);
@@ -32,8 +32,8 @@ export const AuthProvider = ({ children }) => {
     const response = await authAPI.login({ email, password });
     const { token: newToken, user: userData } = response.data;
 
-    localStorage.setItem('stitch_token', newToken);
-    localStorage.setItem('stitch_user', JSON.stringify(userData));
+    localStorage.setItem('vitaliq_token', newToken);
+    localStorage.setItem('vitaliq_user', JSON.stringify(userData));
     setToken(newToken);
     setUser(userData);
 
@@ -44,8 +44,8 @@ export const AuthProvider = ({ children }) => {
     const response = await authAPI.register(formData);
     const { token: newToken, user: userData } = response.data;
 
-    localStorage.setItem('stitch_token', newToken);
-    localStorage.setItem('stitch_user', JSON.stringify(userData));
+    localStorage.setItem('vitaliq_token', newToken);
+    localStorage.setItem('vitaliq_user', JSON.stringify(userData));
     setToken(newToken);
     setUser(userData);
 
@@ -53,8 +53,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('stitch_token');
-    localStorage.removeItem('stitch_user');
+    localStorage.removeItem('vitaliq_token');
+    localStorage.removeItem('vitaliq_user');
     setToken(null);
     setUser(null);
   };

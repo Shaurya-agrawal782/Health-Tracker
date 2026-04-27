@@ -55,7 +55,7 @@ const Login = () => {
             color: 'var(--text-primary)',
             marginBottom: '6px'
           }}>
-            Login to Stitch
+            Login to VitalIQ
           </h1>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
             Secure health application access.

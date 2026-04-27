@@ -6,7 +6,8 @@ const {
   getHistory,
   getLatest,
   getRisk,
-  getSummary
+  getSummary,
+  chatWithCoach
 } = require('../controllers/health.controller');
 
 router.use(protect); // All routes require auth
@@ -16,5 +17,6 @@ router.get('/history', getHistory);
 router.get('/latest', getLatest);
 router.get('/risk', getRisk);
 router.get('/summary', getSummary);
+router.post('/chat', chatWithCoach);
 
 module.exports = router;

@@ -11,7 +11,7 @@ const API = axios.create({
 
 // Request interceptor — attach JWT token
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('stitch_token');
+  const token = localStorage.getItem('vitaliq_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -23,8 +23,8 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('stitch_token');
-      localStorage.removeItem('stitch_user');
+      localStorage.removeItem('vitaliq_token');
+      localStorage.removeItem('vitaliq_user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -44,7 +44,8 @@ export const healthAPI = {
   getHistory: (params) => API.get('/health/history', { params }),
   getLatest: () => API.get('/health/latest'),
   getRisk: () => API.get('/health/risk'),
-  getSummary: (days = 7) => API.get(`/health/summary?days=${days}`)
+  getSummary: (days = 7) => API.get(`/health/summary?days=${days}`),
+  chatWithCoach: (messages) => API.post('/health/chat', { messages })
 };
 
 // ML Prediction APIs

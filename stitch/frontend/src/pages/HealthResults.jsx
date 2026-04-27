@@ -94,6 +94,35 @@ const HealthResults = () => {
             Analysis completed on {new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
 
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+            <span style={{
+              padding: '4px 12px',
+              borderRadius: 'var(--radius-full)',
+              background: 'rgba(255,255,255,0.2)',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '1px solid rgba(255,255,255,0.3)'
+            }}>
+              <FiCheckCircle size={14} /> VitalIQ AI Analysis
+            </span>
+            {prediction.aiGenerated && (
+              <span style={{
+                padding: '4px 12px',
+                borderRadius: 'var(--radius-full)',
+                background: '#fbbf24',
+                color: '#92400e',
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+              }}>
+                PREMIUM AI
+              </span>
+            )}
+          </div>
+
           {/* Risk tags */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {Object.entries(results || {}).map(([key, val]) => (
@@ -116,17 +145,26 @@ const HealthResults = () => {
         </div>
 
         {/* Confidence donut */}
-        <div className="circular-progress" style={{ width: '120px', height: '120px' }}>
-          <svg width="120" height="120" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
-            <circle cx="50" cy="50" r="40" fill="none" stroke="white" strokeWidth="8"
-              strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset}
-              style={{ transition: 'stroke-dashoffset 1s ease-out', animation: 'drawCircle 1.5s ease-out' }} />
-          </svg>
-          <div className="progress-text" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>{confidence}%</div>
-            <div style={{ fontSize: '0.65rem', opacity: 0.8, fontWeight: 500 }}>Confidence</div>
+        <div style={{ textAlign: 'center' }}>
+          <div className="circular-progress" style={{ width: '120px', height: '120px', margin: '0 auto 16px auto' }}>
+            <svg width="120" height="120" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
+              <circle cx="50" cy="50" r="40" fill="none" stroke="white" strokeWidth="8"
+                strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset}
+                style={{ transition: 'stroke-dashoffset 1s ease-out' }} />
+            </svg>
+            <div className="progress-text" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>{confidence}%</div>
+              <div style={{ fontSize: '0.65rem', opacity: 0.8, fontWeight: 500 }}>Confidence</div>
+            </div>
           </div>
+          <button 
+            onClick={() => window.print()}
+            className="btn-primary" 
+            style={{ background: 'white', color: 'var(--primary)', fontWeight: 800, padding: '10px 20px', borderRadius: '12px' }}
+          >
+            <FiDownload /> Export Report
+          </button>
         </div>
       </div>
 
@@ -135,97 +173,121 @@ const HealthResults = () => {
         gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
         gap: '20px'
       }}>
-        {/* Detailed Breakdown */}
-        <div className="medical-card animate-fade-in-up" style={{ padding: '24px', animationDelay: '0.1s', opacity: 0 }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px' }}>
-            Detailed Breakdown
-          </h3>
+        {/* AI Insights & Micro-hacks */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Detailed Breakdown */}
+          <div className="medical-card animate-fade-in-up" style={{ padding: '24px', animationDelay: '0.1s', opacity: 0 }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px' }}>
+              Condition Analysis
+            </h3>
 
-          {Object.entries(results || {}).map(([key, val]) => {
-            const label = conditionLabels[key];
-            const explanation = explanations?.[key];
-            
-            return (
-              <div key={key} style={{
-                padding: '16px',
-                background: val === 1 ? '#fee2e2' : '#d1fae5',
-                borderRadius: 'var(--radius-md)',
-                marginBottom: '12px',
-                border: `1px solid ${val === 1 ? '#fca5a5' : '#a7f3d0'}`
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{
-                    fontSize: '0.95rem',
-                    fontWeight: 600,
-                    color: val === 1 ? '#991b1b' : '#065f46'
-                  }}>
-                    {label?.icon} {label?.name}
-                  </span>
-                  <span style={{
-                    padding: '2px 10px',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    background: val === 1 ? '#fca5a5' : '#a7f3d0',
-                    color: val === 1 ? '#991b1b' : '#065f46'
-                  }}>
-                    {val === 1 ? 'At Risk' : 'Normal'}
-                  </span>
-                </div>
-                
-                {/* SHAP Feature Importance */}
-                {explanation?.feature_importance && (
-                  <div style={{ marginTop: '8px' }}>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                      Key Contributing Factors:
-                    </p>
-                    {Object.entries(explanation.feature_importance)
-                      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-                      .slice(0, 3)
-                      .map(([feature, importance]) => (
-                        <div key={feature} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          marginBottom: '4px'
-                        }}>
-                          <span style={{
-                            fontSize: '0.78rem',
-                            color: 'var(--text-secondary)',
-                            width: '140px',
-                            flexShrink: 0
-                          }}>
-                            {feature.replace(/_/g, ' ')}
-                          </span>
-                          <div style={{
-                            flex: 1,
-                            height: '6px',
-                            borderRadius: '3px',
-                            background: '#e2e8f0',
-                            overflow: 'hidden'
-                          }}>
-                            <div style={{
-                              height: '100%',
-                              width: `${Math.min(Math.abs(importance) * 100, 100)}%`,
-                              background: importance > 0 ? '#ef4444' : '#10b981',
-                              borderRadius: '3px',
-                              transition: 'width 1s ease-out'
-                            }} />
-                          </div>
-                        </div>
-                      ))}
+            {Object.entries(results || {}).map(([key, val]) => {
+              const label = conditionLabels[key];
+              const explanation = explanations?.[key];
+              
+              return (
+                <div key={key} style={{
+                  padding: '16px',
+                  background: val === 1 ? '#fee2e2' : '#d1fae5',
+                  borderRadius: 'var(--radius-md)',
+                  marginBottom: '12px',
+                  border: `1px solid ${val === 1 ? '#fca5a5' : '#a7f3d0'}`
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{
+                      fontSize: '0.95rem',
+                      fontWeight: 600,
+                      color: val === 1 ? '#991b1b' : '#065f46'
+                    }}>
+                      {label?.icon} {label?.name}
+                    </span>
+                    <span style={{
+                      padding: '2px 10px',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      background: val === 1 ? '#fca5a5' : '#a7f3d0',
+                      color: val === 1 ? '#991b1b' : '#065f46'
+                    }}>
+                      {val === 1 ? 'At Risk' : 'Normal'}
+                    </span>
                   </div>
-                )}
-              </div>
-            );
-          })}
+                  
+                  {explanation?.feature_importance && (
+                    <div style={{ marginTop: '8px' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                        Key Contributing Factors:
+                      </p>
+                      {Object.entries(explanation.feature_importance)
+                        .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+                        .slice(0, 3)
+                        .map(([feature, importance]) => (
+                          <div key={feature} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            marginBottom: '4px'
+                          }}>
+                            <span style={{
+                              fontSize: '0.78rem',
+                              color: 'var(--text-secondary)',
+                              width: '140px',
+                              flexShrink: 0
+                            }}>
+                              {feature.replace(/_/g, ' ')}
+                            </span>
+                            <div style={{
+                              flex: 1,
+                              height: '6px',
+                              borderRadius: '3px',
+                              background: '#e2e8f0',
+                              overflow: 'hidden'
+                            }}>
+                              <div style={{
+                                height: '100%',
+                                width: `${Math.min(Math.abs(importance) * 100, 100)}%`,
+                                background: importance > 0 ? '#ef4444' : '#10b981',
+                                borderRadius: '3px',
+                                transition: 'width 1s ease-out'
+                              }} />
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* AI Insights Panel */}
+          {overallRisk?.insights && (
+            <div className="medical-card animate-fade-in-up" style={{ 
+              padding: '24px', 
+              animationDelay: '0.15s', 
+              opacity: 0,
+              background: '#f0f9ff',
+              border: '1px solid #bae6fd'
+            }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', color: '#0369a1' }}>
+                💡 VitalIQ AI Insights
+              </h3>
+              <ul style={{ padding: '0 0 0 20px', margin: 0 }}>
+                {overallRisk.insights.map((insight, i) => (
+                  <li key={i} style={{ fontSize: '0.9rem', color: '#0c4a6e', marginBottom: '8px', lineHeight: 1.6 }}>
+                    {insight}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
-        {/* Recommendations */}
-        <div>
-          <div className="medical-card animate-fade-in-up" style={{ padding: '24px', marginBottom: '20px', animationDelay: '0.2s', opacity: 0 }}>
+        {/* Recommendations & Micro-hacks */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="medical-card animate-fade-in-up" style={{ padding: '24px', animationDelay: '0.2s', opacity: 0 }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px' }}>
-              Recommendations for Next Steps
+              Personalized Lifestyle Plan
             </h3>
             <ol style={{ padding: '0 0 0 20px' }}>
               {(recommendations || []).map((rec, i) => (
@@ -241,13 +303,46 @@ const HealthResults = () => {
             </ol>
           </div>
 
+          {/* Micro-hacks Panel */}
+          {overallRisk?.micro_hacks && (
+            <div className="medical-card animate-fade-in-up" style={{ 
+              padding: '24px', 
+              animationDelay: '0.25s', 
+              opacity: 0,
+              background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+              border: '1px solid #bbf7d0'
+            }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', color: '#15803d' }}>
+                ⚡ 5-Minute Micro-Hacks
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {overallRisk.micro_hacks.map((hack, i) => (
+                  <div key={i} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '12px',
+                    padding: '10px',
+                    background: 'white',
+                    borderRadius: '10px',
+                    fontSize: '0.85rem',
+                    color: '#166534',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+                  }}>
+                    <span style={{ fontSize: '1.2rem' }}>🎯</span>
+                    {hack}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Disclaimer */}
           <div className="disclaimer-box animate-fade-in-up" style={{ animationDelay: '0.3s', opacity: 0 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
               <FiAlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div>
                 <strong>IMPORTANT DISCLAIMER: </strong>
-                This analysis is generated by an AI model and is NOT a medical diagnosis. It is intended for informational purposes only and should not replace professional medical advice, diagnosis, or treatment. Always consult with a qualified healthcare provider.
+                This analysis is generated by an AI model and is NOT a medical diagnosis. It is intended for informational purposes only and should not replace professional medical advice.
               </div>
             </div>
           </div>
@@ -267,13 +362,52 @@ const HealthResults = () => {
         <Link to="/history" className="btn-secondary" style={{ justifyContent: 'center' }}>
           View All History
         </Link>
-        <button className="btn-ghost" style={{ justifyContent: 'center' }}>
-          <FiDownload size={16} /> Download Report
+        <button 
+          onClick={() => window.print()}
+          className="btn-ghost" 
+          style={{ justifyContent: 'center', fontWeight: 700, color: 'var(--primary)' }}
+        >
+          <FiDownload size={16} /> Download Official Report
         </button>
         <button className="btn-ghost" style={{ justifyContent: 'center' }}>
           <FiShare2 size={16} /> Share with Doctor
         </button>
       </div>
+
+      <style>{`
+        @media print {
+          nav, header, aside, .btn-primary, .btn-secondary, .btn-ghost, .back-nav {
+            display: none !important;
+          }
+          body {
+            background: white !important;
+            padding: 0 !important;
+          }
+          .page-enter {
+            animation: none !important;
+          }
+          .medical-card {
+            box-shadow: none !important;
+            border: 1px solid #eee !important;
+            break-inside: avoid;
+          }
+          .teal-card {
+            background: #f0fdfa !important;
+            color: #064e3b !important;
+            border: 2px solid #0d9488 !important;
+            box-shadow: none !important;
+          }
+          .teal-card * {
+            color: #064e3b !important;
+          }
+          .circular-progress circle {
+            stroke: #0d9488 !important;
+          }
+          .circular-progress circle:first-child {
+            stroke: #f1f5f9 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

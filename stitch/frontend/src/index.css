@@ -44,12 +44,21 @@
   --status-action: #ef4444;
   --status-action-bg: #fee2e2;
 
-  /* Text Colors */
-  --text-primary: #1a2332;
-  --text-secondary: #5a6b7d;
-  --text-muted: #94a3b8;
-  --text-white: #ffffff;
-  --text-accent: #0d6e5b;
+  /* Light Theme - High Visibility */
+  --primary: #0d9488;
+  --primary-dark: #064e3b; /* Deep green for text */
+  --primary-light: #f0fdfa;
+  
+  --text-primary: #0f172a; /* Midnight slate for headlines */
+  --text-secondary: #334155; /* Dark grey for descriptions */
+  --text-muted: #4b5563; /* Readable muted text */
+  
+  --bg-primary: #ffffff; /* Clean white */
+  --bg-soft: #f8fafc;
+  
+  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-border: #e2e8f0;
+  --glass-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
 
   /* Border */
   --border-light: #e2e8f0;
@@ -74,6 +83,7 @@
   /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -120,12 +130,11 @@ body {
 
 /* ===== Medical Card ===== */
 .medical-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
+  background: white;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  transition: all var(--transition-base);
-  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  transition: var(--transition-smooth);
 }
 
 .medical-card:hover {
@@ -150,12 +159,12 @@ body {
 
 /* ===== Glass Card (subtle) ===== */
 .glass-card {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--glass-shadow);
   transition: all var(--transition-base);
 }
 
@@ -337,26 +346,112 @@ body {
 .input-label {
   display: block;
   font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 6px;
+  background: #f1f5f9;
+  color: var(--primary);
 }
 
-/* ===== Animations ===== */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* --- Inputs --- */
+.medical-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 2px solid #f1f5f9;
+  outline: none;
+  transition: var(--transition-fast);
+  font-size: 0.95rem;
+}
+
+.medical-input:focus {
+  border-color: var(--primary-100);
+  background: white;
+  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.05);
+}
+
+/* --- Utility --- */
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent-emerald) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.page-enter {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--primary-50);
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-completed { background: #d1fae5; color: #065f46; }
+.badge-pending { background: #fef3c7; color: #92400e; }
+.badge-action { background: #fee2e2; color: #991b1b; }
+
+.link-teal {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.link-teal:hover {
+  color: var(--accent-teal);
+  text-decoration: underline;
+}
+
+.disclaimer-box {
+  padding: 16px;
+  background: #f8fafc;
+  border-left: 4px solid #94a3b8;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fadeInScale {

@@ -1,48 +1,151 @@
 import { useEffect, useState } from 'react';
-import { healthAPI } from '../services/api';
+import { healthAPI, predictAPI, recommendationAPI } from '../services/api';
 import RiskGauge from '../components/dashboard/RiskGauge';
-import { FiAlertCircle, FiInfo, FiPlusCircle } from 'react-icons/fi';
+import { FiAlertCircle, FiInfo, FiPlusCircle, FiCheckCircle, FiChevronRight, FiActivity, FiHeart, FiStar } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
+import HealthMap from '../components/dashboard/HealthMap';
 
 const Insights = () => {
   const [risk, setRisk] = useState(null);
+  const [latestPrediction, setLatestPrediction] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadRisk = async () => {
+    const loadAll = async () => {
       try {
-        const res = await healthAPI.getRisk();
-        setRisk(res.data.data);
+        // Fetch from BOTH data sources in parallel
+        const [riskRes, predRes, recRes] = await Promise.allSettled([
+          healthAPI.getRisk(),
+          predictAPI.getHistory({ limit: 1 }),
+          recommendationAPI.getAll()
+        ]);
+
+        // Use the latest prediction (screening) if available
+        const pred = predRes.status === 'fulfilled' && predRes.value.data.data?.length > 0
+          ? predRes.value.data.data[0]
+          : null;
+        setLatestPrediction(pred);
+
+        // Build the risk object: prefer prediction data over health-log risk
+        if (pred && pred.overallRisk) {
+          // Use prediction-based risk (from the screening form)
+          const predRisk = {
+            level: pred.overallRisk.level,
+            score: pred.overallRisk.score,
+            confidence: pred.overallRisk.confidence,
+            explanation: pred.overallRisk.explanation || `Based on your screening on ${new Date(pred.date).toLocaleDateString()}`,
+            factors: buildFactorsFromPrediction(pred),
+            bmi: pred.input?.bmi || null,
+            bmiCategory: pred.input?.bmi ? getBMICategory(pred.input.bmi) : null,
+            assessedAt: pred.date
+          };
+          setRisk(predRisk);
+        } else if (riskRes.status === 'fulfilled' && riskRes.value.data.data) {
+          setRisk(riskRes.value.data.data);
+        }
+
+        // Recommendations
+        if (recRes.status === 'fulfilled' && recRes.value.data.data) {
+          setRecommendations(recRes.value.data.data);
+        } else if (pred && pred.recommendations) {
+          // Use inline recommendations from prediction
+          setRecommendations(pred.recommendations.map((r, i) => ({
+            title: r,
+            category: 'general',
+            priority: i < 2 ? 'high' : 'medium',
+            actions: [],
+            icon: '💡'
+          })));
+        }
       } catch (err) {
-        console.error('Failed to load risk data:', err);
+        console.error('Failed to load insights:', err);
       } finally {
         setLoading(false);
       }
     };
-    loadRisk();
+    loadAll();
   }, []);
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div className="spinner" />
-      </div>
-    );
+  // Build dynamic factors from a prediction result
+  function buildFactorsFromPrediction(pred) {
+    const factors = [];
+    const results = pred.results || {};
+    const input = pred.input || {};
+
+    if (results.diabetes === 1) {
+      factors.push({
+        factor: 'Diabetes Risk Detected',
+        impact: '+30%',
+        detail: `Glucose level ${input.glucose || 'N/A'} mg/dL exceeds safe threshold. BMI and family history may contribute.`,
+        severity: 'high'
+      });
+    }
+
+    if (results.bp === 1) {
+      factors.push({
+        factor: 'High Blood Pressure Risk',
+        impact: '+25%',
+        detail: `Salt intake and stress levels indicate elevated cardiovascular risk.`,
+        severity: 'high'
+      });
+    }
+
+    if (results.stress === 1) {
+      factors.push({
+        factor: 'Elevated Stress',
+        impact: '+20%',
+        detail: `Sleep ${input.sleep || 'N/A'}hrs and work ${input.work || 'N/A'}hrs/day pattern shows high stress load.`,
+        severity: 'medium'
+      });
+    }
+
+    // Add positive factors if low risk
+    if (results.diabetes === 0) {
+      factors.push({
+        factor: 'Glucose Levels Normal',
+        impact: '-5%',
+        detail: `Blood glucose within healthy range. Continue monitoring regularly.`,
+        severity: 'low'
+      });
+    }
+
+    if (results.bp === 0 && results.stress === 0) {
+      factors.push({
+        factor: 'Cardiovascular Health Good',
+        impact: '-10%',
+        detail: `No elevated blood pressure or chronic stress detected.`,
+        severity: 'low'
+      });
+    }
+
+    // Add input-specific factors
+    if (input.screen && input.screen > 6) {
+      factors.push({
+        factor: 'High Screen Time',
+        impact: '+8%',
+        detail: `${input.screen}hrs of screen time daily — may cause eye strain and sleep disruption.`,
+        severity: 'medium'
+      });
+    }
+
+    if (input.activity && input.activity < 100) {
+      factors.push({
+        factor: 'Low Physical Activity',
+        impact: '+12%',
+        detail: `Only ${input.activity} min/week of activity — WHO recommends 150+ min/week.`,
+        severity: 'medium'
+      });
+    }
+
+    return factors;
   }
 
-  if (!risk || risk.factors.length === 0) {
-    return (
-      <div className="page-enter" style={{ textAlign: 'center', padding: '60px 20px' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔍</div>
-        <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '8px' }}>No Insights Yet</h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
-          Log your daily health data first to get risk insights.
-        </p>
-        <Link to="/health-input" className="btn-primary" style={{ padding: '12px 28px' }}>
-          <FiPlusCircle /> Log Health Data
-        </Link>
-      </div>
-    );
+  function getBMICategory(bmi) {
+    if (bmi < 18.5) return 'Underweight';
+    if (bmi < 25) return 'Normal';
+    if (bmi < 30) return 'Overweight';
+    return 'Obese';
   }
 
   const getSeverityColor = (severity) => {
@@ -55,6 +158,39 @@ const Insights = () => {
     }
   };
 
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'critical': return '#ef4444';
+      case 'high': return '#f97316';
+      case 'medium': return '#3b82f6';
+      case 'low': return '#10b981';
+      default: return '#94a3b8';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (!risk || !risk.factors || risk.factors.length === 0) {
+    return (
+      <div className="page-enter" style={{ textAlign: 'center', padding: '60px 20px' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔍</div>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '8px' }}>No Insights Yet</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
+          Complete a health screening first to get dynamic AI insights.
+        </p>
+        <Link to="/health-check" className="btn-primary" style={{ padding: '12px 28px' }}>
+          <FiPlusCircle /> Start Screening
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="page-enter">
       <div style={{ marginBottom: '28px' }}>
@@ -62,7 +198,7 @@ const Insights = () => {
           <span className="gradient-text">Health Insights</span> 🔍
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          AI-powered analysis of your health risk factors with explainable breakdowns.
+          AI-powered analysis based on your {latestPrediction ? 'latest screening' : 'health data'} — updates automatically with each check.
         </p>
       </div>
 
@@ -106,6 +242,13 @@ const Insights = () => {
               }} />
             </div>
           </div>
+
+          {/* Last Updated Info */}
+          {risk.assessedAt && (
+            <div style={{ marginTop: '12px', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+              Last assessed: {new Date(risk.assessedAt).toLocaleString()}
+            </div>
+          )}
         </div>
 
         <div>
@@ -120,12 +263,11 @@ const Insights = () => {
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }} className="stagger-children">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {risk.factors.map((factor, i) => (
-              <div key={i} className="medical-card animate-fade-in-up" style={{
+              <div key={i} className="medical-card" style={{
                 padding: '20px',
                 borderLeft: `3px solid ${getSeverityColor(factor.severity)}`,
-                opacity: 0
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -150,7 +292,7 @@ const Insights = () => {
                   background: '#e2e8f0', overflow: 'hidden'
                 }}>
                   <div style={{
-                    height: '100%', width: `${parseInt(factor.impact)}%`,
+                    height: '100%', width: `${Math.abs(parseInt(factor.impact))}%`,
                     background: getSeverityColor(factor.severity),
                     borderRadius: '2px', transition: 'width 0.8s ease-out'
                   }} />
@@ -159,6 +301,74 @@ const Insights = () => {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ===== RECOMMENDATIONS SECTION ===== */}
+      {recommendations.length > 0 && (
+        <div style={{ marginTop: '40px' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '4px' }}>
+              Personalized Recommendations 💡
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+              Actionable steps based on your risk factors — updated after every screening.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+            {recommendations.slice(0, 6).map((rec, i) => (
+              <div key={i} className="medical-card" style={{
+                padding: '24px',
+                borderTop: `3px solid ${getPriorityColor(rec.priority)}`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{rec.icon || '💡'}</span>
+                    {rec.title}
+                  </h4>
+                  <span style={{
+                    padding: '2px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 700,
+                    color: getPriorityColor(rec.priority),
+                    background: `${getPriorityColor(rec.priority)}15`,
+                    textTransform: 'uppercase'
+                  }}>
+                    {rec.priority}
+                  </span>
+                </div>
+                {rec.reason && (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    {rec.reason}
+                  </p>
+                )}
+                {rec.actions && rec.actions.length > 0 && (
+                  <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {rec.actions.slice(0, 3).map((action, j) => (
+                      <li key={j} style={{ fontSize: '0.8rem', color: '#475569', lineHeight: 1.4 }}>
+                        {action}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Geospatial Insights Map */}
+      <div style={{ marginTop: '40px' }}>
+        <div style={{ marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '4px' }}>
+            Regional Wellness Map 🗺️
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            Environmental and community health factors in your vicinity.
+          </p>
+        </div>
+        <HealthMap />
       </div>
 
       <style>{`

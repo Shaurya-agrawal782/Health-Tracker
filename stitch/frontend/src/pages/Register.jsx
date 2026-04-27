@@ -81,7 +81,7 @@ const Register = () => {
             color: 'var(--text-primary)',
             marginBottom: '4px'
           }}>
-            Join Stitch
+            Join VitalIQ
           </h1>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
             Create your health profile to get started
