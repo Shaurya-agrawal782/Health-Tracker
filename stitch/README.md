@@ -1,91 +1,83 @@
-# 🚀 VitalIQ — AI-Driven Predictive Healthcare Platform
+# 🏥 VitalIQ: AI-Powered Predictive Healthcare
 
-VitalIQ is a cutting-edge MERN-stack platform designed to revolutionize personal healthcare. By leveraging AI-driven analytics, real-time geospatial tracking, and personalized coaching, VitalIQ empowers users to stay ahead of health risks and optimize their wellness journey.
+VitalIQ is a next-generation health platform that uses Artificial Intelligence to predict health risks, track wellness, and provide live regional health data. Built for the modern user, it combines medical precision with a premium, interactive user experience.
 
-## ✨ Key Features
+## 🚀 Key Features
 
-- **🧠 AI Health Screening**: Advanced risk prediction engine that analyzes lifestyle factors (sleep, stress, activity) to provide a comprehensive health score and confidence level.
-- **🗺️ Interactive Regional Health Map**: A Leaflet-powered geospatial dashboard showing live health alerts, air quality warnings, and vaccination camps in your vicinity.
-- **🚨 Emergency Medical Locator**: Automatic detection of "High Risk" status with instant links to the nearest hospitals and emergency services via Google Maps.
-- **🤖 VitalIQ AI Coach**: A persistent, intelligent chat assistant powered by Gemini AI to answer wellness questions and provide personalized health advice.
-- **📊 Dynamic Insights**: Real-time visualization of health trends, weekly averages, and actionable recommendations.
-- **🏆 Gamified Leaderboard**: Compete with friends on health metrics and earn reward points for maintaining a healthy streak.
+### 🛡️ Advanced Authentication Suite
+*   **Google Social Login**: Seamless one-tap onboarding.
+*   **Two-Step Verification**: Real-world security using **Nodemailer**. Users receive unique 6-digit codes in their Gmail for both login and registration.
+*   **Guest Access**: Explore the full platform without an account using the dedicated "Guest Mode".
 
-## 🛠️ Technology Stack
+### 🗺️ Live Geolocation Health Map
+*   **Interactive Command Center**: A live, zoomable map using **Leaflet** and **CartoDB Voyager** tiles.
+*   **Smart Geolocation**: Automatically centers on the user with pulsing location markers.
+*   **Regional Risk Analysis**: Real-time environmental metrics (AQI, UV, Humidity) integrated into pulsing map markers.
+*   **Emergency Medical Locator**: Intelligent hospital detection for high-risk zones with one-click navigation.
 
-- **Frontend**: React 19, Vite, Vanilla CSS, React-Leaflet
-- **Backend**: Node.js, Express
-- **Database**: MongoDB
-- **AI Engine**: Google Gemini AI (for Health Coaching & Insights)
-- **Deployment**: Render (Auto-deploy on Git push)
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js v18+
-- MongoDB instance (Local or Atlas)
-- Google Gemini API Key
-
-### 🔑 Getting your Google Client ID (Free)
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a new project.
-3. Navigate to **APIs & Services > Credentials**.
-4. Click **Create Credentials > OAuth client ID**.
-5. Select **Web application** as the application type.
-6. Add `http://localhost:5173` to **Authorized JavaScript origins**.
-7. Click **Create** and copy your **Client ID**.
-8. Paste it into your `.env` file as `VITE_GOOGLE_CLIENT_ID`.
-
-2. **Backend Setup**
-   ```bash
-   cd backend
-   npm install
-   # Create a .env file based on your environment
-   npm run dev
-   ```
-
-3. **Frontend Setup**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-## 🌐 Deployment (Render)
-
-VitalIQ is optimized for deployment on **Render**.
-
-### To update your deployment:
-1. **Push to GitHub**: Any push to the `main` branch will trigger an automatic rebuild on Render.
-   ```bash
-   git add .
-   git commit -m "Upgrade: VitalIQ Platform - AI Insights, Interactive Health Map, and Premium UI Fixes"
-   git push origin main
-   ```
-2. **Environment Variables**: Ensure the following variables are set in your Render dashboard:
-   - `MONGODB_URI`
-   - `JWT_SECRET`
-   - `GEMINI_API_KEY`
-   - `FRONTEND_URL` (Set to your Render frontend URL for CORS)
-
-### Troubleshooting
-- **CORS Errors**: If you encounter CORS issues, ensure your Render frontend URL is added to the `allowedOrigins` in `backend/app.js`.
-- **Build Failures**: Check the **Logs** tab in Render. Common issues include missing dependencies (ensure `npm install` runs in both directories).
-
-## 📁 Project Structure
-
-```
-stitch/
-├── backend/            # Express Server, Routes, Controllers, Models, Utils
-├── frontend/           # React Frontend (Vite)
-│   ├── src/components/ # Reusable UI components (Layout, Dashboard, Maps)
-│   ├── src/pages/      # Feature pages (Insights, History, Screening)
-│   └── src/services/   # API communication logic (Gemini & Health API)
-└── README.md
-```
-
-## 👥 Contributors
-Built with ❤️ for the Hackathon by Shaurya Agrawal.
+### 🧠 AI Health Insights & Prediction
+*   **ML Screening Engine**: Predicts risks based on comprehensive health metrics.
+*   **Dynamic Recommendations**: Context-aware health advice that adapts instantly to your latest screening results.
+*   **Health Ledger**: Track daily activities, weight, and calories with a beautiful interactive UI.
 
 ---
-**VitalIQ** — *Your Health, Predicted.*
+
+## 🛠️ Technology Stack
+- **Frontend**: React 19, Vite, Tailwind CSS, Leaflet.js, Lucide Icons.
+- **Backend**: Node.js, Express, MongoDB.
+- **AI/ML**: Google Gemini Pro API.
+- **Services**: Google OAuth 2.0, Nodemailer (Gmail SMTP).
+
+---
+
+## ⚙️ Setup & Installation
+
+### 1. Prerequisites
+- Node.js (v18+)
+- MongoDB (Local or Atlas)
+- Google Cloud Console Project (for Auth)
+- Gmail App Password (for OTPs)
+
+### 2. Environment Variables
+Create a `.env` file in the **backend** and **frontend** directories.
+
+#### Backend (`/backend/.env`)
+```env
+PORT=5000
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=your_secret_key
+GEMINI_API_KEY=your_google_ai_key
+EMAIL_USER=your_gmail@gmail.com
+EMAIL_PASS=your_16_digit_app_password
+```
+
+#### Frontend (`/frontend/.env`)
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+```
+
+### 3. Run Locally
+```bash
+# Backend
+cd backend
+npm install
+npm run dev
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## 🎨 Visual Identity
+VitalIQ uses a curated **Emerald & Slate** design system, utilizing **Glassmorphism** and **Dynamic Micro-animations** to ensure a premium feel that inspires confidence in healthcare.
+
+---
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+© 2026 VitalIQ Health. Your Health, Predicted.
