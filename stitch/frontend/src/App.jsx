@@ -18,6 +18,7 @@ import Insights from './pages/Insights';
 import Recommendations from './pages/Recommendations';
 import MealPlanner from './pages/MealPlanner';
 import Leaderboard from './pages/Leaderboard';
+import NotFound from './pages/NotFound';
 
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -109,7 +110,7 @@ function App() {
           </Route>
 
           {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </AuthProvider>
