@@ -162,6 +162,61 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
+// @desc    Forgot Password (Step 1: Send OTP)
+// @route   POST /api/auth/forgot-password
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpire = Date.now() + 10 * 60 * 1000; // 10 mins
+    await user.save();
+
+    // Send Email
+    await sendOtpEmail(email, otp);
+
+    res.json({ success: true, message: 'OTP sent to email' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Reset Password (Step 2: Verify OTP & Change Password)
+// @route   POST /api/auth/reset-password
+exports.resetPassword = [
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('otp').notEmpty().withMessage('OTP is required'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  async (req, res) => {
+    try {
+      const { email, otp, newPassword } = req.body;
+
+      const user = await User.findOne({ email, otp, otpExpire: { $gt: Date.now() } });
+      
+      if (!user) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      }
+
+      // Update password
+      user.password = newPassword;
+      user.otp = undefined;
+      user.otpExpire = undefined;
+      await user.save();
+
+      res.json({ success: true, message: 'Password reset successful' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+];
+
 // @desc    Get current user profile
 // @route   GET /api/auth/profile
 exports.getProfile = async (req, res) => {

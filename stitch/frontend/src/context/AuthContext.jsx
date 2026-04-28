@@ -90,6 +90,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const forgotPassword = async (email) => {
+    const response = await authAPI.forgotPassword({ email });
+    return response.data;
+  };
+
+  const resetPassword = async (data) => {
+    const response = await authAPI.resetPassword(data);
+    return response.data;
+  };
+
   const isAuthenticated = !!token && !!user;
 
   return (
@@ -104,7 +114,9 @@ export const AuthProvider = ({ children }) => {
       loginAsGuest,
       verifyOtp,
       completeLogin,
-      sendRegisterOtp
+      sendRegisterOtp,
+      forgotPassword,
+      resetPassword
     }}>
       {children}
     </AuthContext.Provider>

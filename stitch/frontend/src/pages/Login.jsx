@@ -229,6 +229,16 @@ const Login = () => {
                 {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
               </button>
             </div>
+            <div style={{ textAlign: 'right', marginTop: '8px' }}>
+              <Link to="/forgot-password" style={{
+                fontSize: '0.8rem',
+                color: 'var(--primary)',
+                fontWeight: 600,
+                textDecoration: 'none'
+              }}>
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           {/* Submit */}
