@@ -11,3 +11,7 @@ serviceAccount*.json
 secrets.json
 secrets.yaml
 secrets.yml
+
+# Private Notes
+PROJECT_DETAILS.md
+PROJECT_FLOW.md

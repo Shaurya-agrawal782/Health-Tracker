@@ -9,9 +9,15 @@ const ML_API_URL = process.env.ML_API_URL || 'http://localhost:8000';
 // @route   POST /api/predict
 exports.predict = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    let user = await User.findById(req.user._id);
+    
+    // Fallback to req.user if DB lookup fails (e.g., for mock guest users)
+    if (!user && req.user) {
+      user = req.user;
+    }
+
+    if (!user || !user.age) {
+      return res.status(404).json({ success: false, message: 'User not found or profile incomplete' });
     }
 
     const {

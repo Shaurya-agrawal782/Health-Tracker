@@ -34,7 +34,10 @@ exports.addHealthData = async (req, res) => {
 
     // Update User points and streaks in background
     try {
-      const user = await User.findById(req.user._id);
+      let user = await User.findById(req.user._id);
+      if (!user && req.user) user = req.user;
+      if (!user) return; // Silent fail for background tasks if user completely missing
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
@@ -148,7 +151,9 @@ exports.getRisk = async (req, res) => {
       });
     }
 
-    const user = await User.findById(req.user._id);
+    let user = await User.findById(req.user._id);
+    if (!user && req.user) user = req.user;
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     
     // Try Gemini AI first
     let riskResult = await geminiService.analyzeHealth(latest, user);
@@ -175,7 +180,9 @@ exports.chatWithCoach = async (req, res) => {
     const { messages } = req.body;
     
     // Fetch user context for better AI response
-    const user = await User.findById(req.user._id);
+    let user = await User.findById(req.user._id);
+    if (!user && req.user) user = req.user;
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     const latestHealth = await HealthData.findOne({ userId: req.user._id }).sort({ date: -1 });
     
     const context = {
@@ -243,7 +250,9 @@ exports.getSummary = async (req, res) => {
     });
 
     const count = entries.length;
-    const user = await User.findById(req.user._id);
+    let user = await User.findById(req.user._id);
+    if (!user && req.user) user = req.user;
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     const bmi = calculateBMI(user.weight, user.height);
 
     const summary = {

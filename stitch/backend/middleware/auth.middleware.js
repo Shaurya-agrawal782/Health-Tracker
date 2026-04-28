@@ -19,10 +19,13 @@ const protect = async (req, res, next) => {
   const mockTokens = ['vitaliq_guest_access_token', 'mock_google_token'];
   if (mockTokens.includes(token)) {
     req.user = {
-      _id: '69efa1ed47cbbb02c162bb28', // Using a valid User ID from DB
+      _id: '69efa1ed47cbbb02c162bb28', // Using a consistent ID
       name: token === 'mock_google_token' ? 'Google Explorer' : 'Guest Explorer',
       email: token === 'mock_google_token' ? 'google-user@example.com' : 'guest@vitaliq.ai',
       role: 'guest',
+      age: 28,
+      height: 175,
+      weight: 72,
       points: 0,
       currentStreak: 0
     };

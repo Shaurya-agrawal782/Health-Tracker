@@ -8,7 +8,14 @@ const { generateRecommendations } = require('../utils/recommendationEngine');
 // @route   GET /api/recommendations
 exports.getRecommendations = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    let user = await User.findById(req.user._id);
+    if (!user && req.user) {
+      user = req.user;
+    }
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
 
     // Try latest health log first
     const latest = await HealthData.findOne({ userId: req.user._id })
