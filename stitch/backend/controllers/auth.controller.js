@@ -217,6 +217,30 @@ exports.resetPassword = [
   }
 ];
 
+// @desc    Get leaderboard (Top users by points)
+// @route   GET /api/auth/leaderboard
+exports.getLeaderboard = async (req, res) => {
+  try {
+    const users = await User.find()
+      .sort({ points: -1 })
+      .limit(10)
+      .select('name points currentStreak');
+
+    const leaderboard = users.map((u, index) => ({
+      rank: index + 1,
+      name: u.name,
+      points: u.points,
+      streak: u.currentStreak,
+      level: u.points >= 4000 ? 'Elite' : u.points >= 3000 ? 'Expert' : u.points >= 1000 ? 'Pro' : 'Beginner',
+      isUser: req.user && u._id.toString() === req.user._id.toString()
+    }));
+
+    res.json({ success: true, data: leaderboard });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get current user profile
 // @route   GET /api/auth/profile
 exports.getProfile = async (req, res) => {

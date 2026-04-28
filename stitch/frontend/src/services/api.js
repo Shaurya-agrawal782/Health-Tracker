@@ -41,6 +41,7 @@ export const authAPI = {
   verifyOtp: (data) => API.post('/auth/verify-otp', data),
   forgotPassword: (data) => API.post('/auth/forgot-password', data),
   resetPassword: (data) => API.post('/auth/reset-password', data),
+  getLeaderboard: () => API.get('/auth/leaderboard'),
   getProfile: () => API.get('/auth/profile')
 };
 

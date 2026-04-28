@@ -40,7 +40,8 @@ const Dashboard = () => {
     );
   }
 
-  const userHealthScore = summary?.activityScore || 64;
+  const userHealthScore = summary?.activityScore || 0;
+  const isNewUser = checks.length === 0 && !summary;
 
   return (
     <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -61,8 +62,11 @@ const Dashboard = () => {
             Hello, {user?.name?.split(' ')[0]}! 👋
           </h1>
           <p style={{ fontSize: '1.05rem', opacity: 0.9, maxWidth: '600px', lineHeight: 1.6 }}>
-            Your VitalIQ score is <strong>{userHealthScore}/100</strong> today. 
-            You've completed 85% of your weekly wellness goals. Keep it up!
+            {isNewUser ? (
+              "Welcome to VitalIQ! Complete your first health check to see your AI health score and start your wellness journey."
+            ) : (
+              <>Your VitalIQ score is <strong>{userHealthScore}/100</strong> today. Keep tracking to stay on top of your health!</>
+            )}
           </p>
           <div style={{ display: 'flex', gap: '16px', marginTop: '32px' }}>
             <Link to="/health-check" className="btn-primary" style={{ background: 'white', color: '#0d9488', fontWeight: 800, padding: '14px 28px' }}>
@@ -94,15 +98,15 @@ const Dashboard = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
               <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Daily Steps</span>
-              <span style={{ fontWeight: 800, color: '#0f172a' }}>{summary?.averages?.steps?.toLocaleString() || '6,420'}</span>
+              <span style={{ fontWeight: 800, color: '#0f172a' }}>{summary?.averages?.steps?.toLocaleString() || '0'}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
               <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Sleep Hours</span>
-              <span style={{ fontWeight: 800, color: '#0f172a' }}>{summary?.averages?.sleepHours || '7.5'}h</span>
+              <span style={{ fontWeight: 800, color: '#0f172a' }}>{summary?.averages?.sleepHours || '0'}h</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
               <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Water Intake</span>
-              <span style={{ fontWeight: 800, color: '#0d9488' }}>{summary?.averages?.waterIntake || '2.4'}L</span>
+              <span style={{ fontWeight: 800, color: '#0d9488' }}>{summary?.averages?.waterIntake || '0'}L</span>
             </div>
           </div>
         </div>
@@ -117,7 +121,7 @@ const Dashboard = () => {
             <div style={{ padding: '16px', background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '8px' }}>
                 <span style={{ fontWeight: 700 }}>Exercise Streak</span>
-                <span>{user?.currentStreak || 3}/7 Days</span>
+                <span>{user?.currentStreak || 0}/7 Days</span>
               </div>
               <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
                 <div style={{ width: '45%', height: '100%', background: '#0d9488' }} />
@@ -127,7 +131,7 @@ const Dashboard = () => {
               <div style={{ width: '40px', height: '40px', background: '#ccfbf1', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🏆</div>
               <div>
                 <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Current Reward Points</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0d9488' }}>{(user?.points || 450).toLocaleString()} PTS</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0d9488' }}>{(user?.points || 0).toLocaleString()} PTS</div>
               </div>
             </div>
           </div>

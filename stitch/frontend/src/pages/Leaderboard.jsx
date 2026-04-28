@@ -1,23 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { FiTrendingUp, FiAward, FiUsers, FiStar, FiChevronUp } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../services/api';
 
 const Leaderboard = () => {
   const { user } = useAuth();
+  const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Mocked leaderboard data for hackthon
-  const leaders = [
-    { rank: 1, name: 'Ananya Sharma', points: 4250, streak: 15, level: 'Elite' },
-    { rank: 2, name: 'Vikram Singh', points: 3820, streak: 12, level: 'Expert' },
-    { rank: 3, name: 'Priya Patel', points: 3600, streak: 10, level: 'Expert' },
-    { rank: 4, name: user?.name || 'You', points: user?.points || 1200, streak: user?.currentStreak || 3, level: 'Pro', isUser: true },
-    { rank: 5, name: 'Rahul Verma', points: 3100, streak: 8, level: 'Intermediate' },
-    { rank: 6, name: 'Sneha Gupta', points: 2950, streak: 7, level: 'Intermediate' },
-  ];
-
   useEffect(() => {
-    setTimeout(() => setLoading(false), 800);
+    const fetchLeaderboard = async () => {
+      try {
+        const res = await authAPI.getLeaderboard();
+        setLeaders(res.data.data);
+      } catch (err) {
+        console.error('Failed to fetch leaderboard:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLeaderboard();
   }, []);
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}><div className="spinner" /></div>;
@@ -104,9 +106,13 @@ const Leaderboard = () => {
             textAlign: 'center'
           }}>
             <FiAward size={48} style={{ marginBottom: '16px' }} />
-            <h3 style={{ fontSize: '1.4rem', fontWeight: 900, marginBottom: '8px' }}>Global Rank #4</h3>
+            <h3 style={{ fontSize: '1.4rem', fontWeight: 900, marginBottom: '8px' }}>
+              Global Rank #{leaders.find(l => l.isUser)?.rank || 'N/A'}
+            </h3>
             <p style={{ opacity: 0.9, fontSize: '0.9rem', marginBottom: '24px' }}>
-              You're in the top 10% of users this week. Keep logging to reach Elite level!
+              {leaders.find(l => l.isUser)?.rank <= 3 ? 
+                "Incredible! You're among the top wellness leaders." : 
+                "Keep logging your health data to climb the leaderboard!"}
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
               <div style={{ padding: '12px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', flex: 1 }}>
