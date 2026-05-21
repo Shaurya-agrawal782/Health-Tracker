@@ -1,16 +1,32 @@
-# React + Vite
+# VitalIQ Health Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend for VitalIQ Health, an AI-assisted wellness risk-screening platform that helps users track lifestyle metrics, estimate wellness risk levels, and receive personalized wellness recommendations.
 
-Currently, two official plugins are available:
+VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Scripts
 
-## React Compiler
+- `npm run dev` starts the local Vite dev server.
+- `npm run build` creates a production build.
+- `npm run lint` checks the React source with ESLint.
+- `npm run preview` serves the production build locally.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Notes
 
-## Expanding the ESLint configuration
+This app contains the public landing page, auth screens, wellness dashboard, risk screening flow, insights, recommendations, meal planner, and leaderboard UI.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Environment
+
+Create `frontend/.env` for local development:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+For Render static-site deployment, set `VITE_API_URL` to the deployed backend API URL:
+
+```env
+VITE_API_URL=https://your-backend-service.onrender.com/api
+```
+
+The backend Render service should also set `FRONTEND_URL=https://your-frontend-service.onrender.com` so CORS allows requests from the static site.

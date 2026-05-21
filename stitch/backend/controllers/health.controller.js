@@ -144,7 +144,9 @@ exports.getRisk = async (req, res) => {
         data: {
           level: 'Unknown',
           score: 0,
-          confidence: 0,
+          confidence: null,
+          confidenceLabel: 'No wellness estimate available',
+          source: 'unavailable',
           factors: [],
           explanation: 'No health data available. Please log your daily health data first.'
         }
@@ -164,6 +166,9 @@ exports.getRisk = async (req, res) => {
       riskResult = calculateRisk(latest, user);
       riskResult.aiGenerated = false;
     } else {
+      riskResult.confidence = null;
+      riskResult.confidenceLabel = 'AI-assisted explanation';
+      riskResult.source = 'ai_assisted';
       riskResult.aiGenerated = true;
     }
 
@@ -173,13 +178,13 @@ exports.getRisk = async (req, res) => {
   }
 };
 
-// @desc    Chat with AI Health Coach
+// @desc    Chat with AI-assisted wellness coach
 // @route   POST /api/health/chat
 exports.chatWithCoach = async (req, res) => {
   try {
     const { messages } = req.body;
     
-    // Fetch user context for better AI response
+    // Fetch user context for a more relevant wellness response
     let user = await User.findById(req.user._id);
     if (!user && req.user) user = req.user;
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });

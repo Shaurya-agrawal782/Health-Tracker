@@ -59,19 +59,20 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  const loginAsGuest = () => {
-    const guestUser = {
-      _id: 'guest_123',
-      name: 'Guest Explorer',
-      email: 'guest@vitaliq.ai',
-      role: 'guest'
-    };
-    const guestToken = 'vitaliq_guest_access_token';
+  const loginAsGuest = async () => {
+    try {
+      const response = await authAPI.guestLogin();
+      const { token: guestToken, user: guestUser } = response.data;
 
-    localStorage.setItem('vitaliq_token', guestToken);
-    localStorage.setItem('vitaliq_user', JSON.stringify(guestUser));
-    setToken(guestToken);
-    setUser(guestUser);
+      localStorage.setItem('vitaliq_token', guestToken);
+      localStorage.setItem('vitaliq_user', JSON.stringify(guestUser));
+      setToken(guestToken);
+      setUser(guestUser);
+
+      return response.data;
+    } catch (error) {
+      throw new Error('Guest login is temporarily unavailable. Please try again.');
+    }
   };
 
   const logout = () => {

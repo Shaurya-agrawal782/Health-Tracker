@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiTrendingUp, FiAward, FiUsers, FiStar, FiChevronUp } from 'react-icons/fi';
+import { FiTrendingUp, FiAward, FiUsers, FiStar, FiShield } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 
@@ -14,7 +14,7 @@ const Leaderboard = () => {
         const res = await authAPI.getLeaderboard();
         setLeaders(res.data.data);
       } catch (err) {
-        console.error('Failed to fetch leaderboard:', err);
+        console.error('Failed to fetch wellness streaks:', err);
       } finally {
         setLoading(false);
       }
@@ -26,13 +26,31 @@ const Leaderboard = () => {
 
   return (
     <div className="page-enter">
-      <div style={{ marginBottom: '32px' }}>
+      <div style={{ marginBottom: '16px' }}>
         <h1 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '8px' }}>
-          <span className="gradient-text">Global Wellness Leaderboard</span> 🏆
+          <span className="gradient-text">Global Wellness Streaks</span> 🏆
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-          Compete with the VitalIQ community and earn rewards for consistent health tracking.
+          Celebrate consistency with the VitalIQ Health community and earn rewards for wellness tracking.
         </p>
+      </div>
+
+      {/* Privacy Note */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '12px 18px',
+        marginBottom: '28px',
+        background: 'linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%)',
+        border: '1px solid #a7f3d0',
+        borderRadius: 'var(--radius-md)',
+        fontSize: '0.85rem',
+        color: '#065f46',
+        fontWeight: 500
+      }}>
+        <FiShield size={18} style={{ flexShrink: 0, color: '#10b981' }} />
+        <span>🔒 Wellness Streaks highlights consistency using privacy-safe display names. Personal health data is never shown here.</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '32px' }}>
@@ -42,11 +60,11 @@ const Leaderboard = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead style={{ background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
               <tr>
-                <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '0.8rem', color: '#64748b' }}>RANK</th>
+                <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '0.8rem', color: '#64748b' }}>POSITION</th>
                 <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '0.8rem', color: '#64748b' }}>USER</th>
-                <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '0.8rem', color: '#64748b' }}>SCORE</th>
+                <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '0.8rem', color: '#64748b' }}>WELLNESS POINTS</th>
                 <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '0.8rem', color: '#64748b' }}>STREAK</th>
-                <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '0.8rem', color: '#64748b' }}>LEVEL</th>
+                <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '0.8rem', color: '#64748b' }}>BADGE</th>
               </tr>
             </thead>
             <tbody>
@@ -63,7 +81,7 @@ const Leaderboard = () => {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontWeight: 800, color: idx < 3 ? 'var(--primary)' : '#64748b'
                     }}>
-                      {leader.rank}
+                      {leader.position}
                     </div>
                   </td>
                   <td style={{ padding: '20px 24px' }}>
@@ -71,11 +89,11 @@ const Leaderboard = () => {
                       <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <FiUsers color="#64748b" />
                       </div>
-                      <span>{leader.name} {leader.isUser && '(You)'}</span>
+                      <span>{leader.displayName} {leader.isUser && '(You)'}</span>
                     </div>
                   </td>
                   <td style={{ padding: '20px 24px', fontWeight: 800, color: 'var(--primary)' }}>
-                    {leader.points.toLocaleString()}
+                    {(leader.wellnessPoints || 0).toLocaleString()}
                   </td>
                   <td style={{ padding: '20px 24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f59e0b', fontWeight: 700 }}>
@@ -85,10 +103,10 @@ const Leaderboard = () => {
                   <td style={{ padding: '20px 24px' }}>
                     <span style={{ 
                       padding: '4px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700,
-                      background: leader.level === 'Elite' ? '#fef3c7' : '#f1f5f9',
-                      color: leader.level === 'Elite' ? '#92400e' : '#475569'
+                      background: leader.badge === 'Elite' ? '#fef3c7' : leader.badge === 'Expert' ? '#dbeafe' : '#f1f5f9',
+                      color: leader.badge === 'Elite' ? '#92400e' : leader.badge === 'Expert' ? '#1e40af' : '#475569'
                     }}>
-                      {leader.level}
+                      {leader.badge}
                     </span>
                   </td>
                 </tr>
@@ -107,21 +125,21 @@ const Leaderboard = () => {
           }}>
             <FiAward size={48} style={{ marginBottom: '16px' }} />
             <h3 style={{ fontSize: '1.4rem', fontWeight: 900, marginBottom: '8px' }}>
-              Global Rank #{leaders.find(l => l.isUser)?.rank || 'N/A'}
+              Position #{leaders.find(l => l.isUser)?.position || 'N/A'}
             </h3>
             <p style={{ opacity: 0.9, fontSize: '0.9rem', marginBottom: '24px' }}>
-              {leaders.find(l => l.isUser)?.rank <= 3 ? 
+              {leaders.find(l => l.isUser)?.position <= 3 ? 
                 "Incredible! You're among the top wellness leaders." : 
-                "Keep logging your health data to climb the leaderboard!"}
+                "Keep logging your health data to maintain your wellness consistency!"}
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
               <div style={{ padding: '12px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', flex: 1 }}>
-                <div style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>Points</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{user?.points || 1200}</div>
+                <div style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>Wellness Points</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{user?.points || 0}</div>
               </div>
               <div style={{ padding: '12px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', flex: 1 }}>
                 <div style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>Streak</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{user?.currentStreak || 3}</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{user?.currentStreak || 0}</div>
               </div>
             </div>
           </div>

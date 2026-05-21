@@ -1,6 +1,19 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+export const API_BASE_URL = (
+  configuredApiUrl ||
+  (import.meta.env.DEV ? 'http://localhost:5000/api' : '')
+).replace(/\/+$/, '');
+
+if (!API_BASE_URL) {
+  console.error('VITE_API_URL is missing. Please configure backend API URL.');
+  console.error('For Render, set VITE_API_URL to https://your-backend-service.onrender.com/api.');
+}
+
+if (!import.meta.env.DEV && API_BASE_URL.startsWith('/')) {
+  console.error('VITE_API_URL should be an absolute backend URL in production unless a production proxy is configured.');
+}
 
 const API = axios.create({
   baseURL: API_BASE_URL,
@@ -11,6 +24,10 @@ const API = axios.create({
 
 // Request interceptor — attach JWT token
 API.interceptors.request.use((config) => {
+  if (!API_BASE_URL) {
+    return Promise.reject(new Error('VITE_API_URL is missing. Please configure backend API URL.'));
+  }
+
   const token = localStorage.getItem('vitaliq_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -37,6 +54,7 @@ API.interceptors.response.use(
 export const authAPI = {
   register: (data) => API.post('/auth/register', data),
   sendRegisterOtp: (data) => API.post('/auth/send-register-otp', data),
+  guestLogin: () => API.post('/auth/guest'),
   login: (data) => API.post('/auth/login', data),
   verifyOtp: (data) => API.post('/auth/verify-otp', data),
   forgotPassword: (data) => API.post('/auth/forgot-password', data),

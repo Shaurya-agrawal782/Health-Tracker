@@ -4,9 +4,28 @@ import { predictAPI } from '../services/api';
 import { FiAlertTriangle, FiDownload, FiShare2, FiArrowLeft, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 
 const conditionLabels = {
-  diabetes: { name: 'Diabetes', icon: '🩸', riskLabel: 'Diabetes Risk', noRiskLabel: 'No Diabetes Risk' },
-  bp: { name: 'Blood Pressure', icon: '❤️', riskLabel: 'High BP Risk', noRiskLabel: 'Normal BP' },
-  stress: { name: 'Stress', icon: '🧠', riskLabel: 'High Stress', noRiskLabel: 'Low Stress' }
+  diabetes: { name: 'Glucose Pattern', icon: '🩸', riskLabel: 'Elevated Glucose Risk Signal', noRiskLabel: 'No Elevated Glucose Signal' },
+  bp: { name: 'Blood Pressure Pattern', icon: '❤️', riskLabel: 'Elevated Blood Pressure Signal', noRiskLabel: 'No Elevated Blood Pressure Signal' },
+  stress: { name: 'Stress Pattern', icon: '🧠', riskLabel: 'Elevated Stress Signal', noRiskLabel: 'Lower Stress Signal' }
+};
+
+const DISCLAIMER = 'VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.';
+
+const firstProvided = (...values) => values.find(value => value !== undefined && value !== null && value !== '');
+
+const formatInputValue = (value, suffix = '') => {
+  const provided = firstProvided(value);
+  if (provided === undefined) return 'Not provided';
+  if (Array.isArray(provided)) return provided.length > 0 ? provided.join(', ') : 'Not provided';
+  if (typeof provided === 'boolean') return provided ? 'Yes' : 'No';
+  return `${provided}${suffix}`;
+};
+
+const getEstimateLabel = (source, aiGenerated) => {
+  if (source === 'ml_model') return 'ML model estimate';
+  if (source === 'rule_based') return 'Rule-based wellness estimate';
+  if (source === 'ai_assisted' || aiGenerated) return 'AI-assisted wellness estimate';
+  return 'Wellness estimate';
 };
 
 const HealthResults = () => {
@@ -17,6 +36,12 @@ const HealthResults = () => {
   useEffect(() => {
     const load = async () => {
       try {
+        const cached = sessionStorage.getItem(`guest_prediction_${id}`);
+        if (cached) {
+          setPrediction(JSON.parse(cached));
+          setLoading(false);
+          return;
+        }
         const res = await predictAPI.getById(id);
         setPrediction(res.data.data);
       } catch (err) {
@@ -50,7 +75,27 @@ const HealthResults = () => {
 
   const { results, overallRisk, explanations, recommendations, input, date } = prediction;
   const riskCount = (results?.diabetes || 0) + (results?.bp || 0) + (results?.stress || 0);
-  const confidence = overallRisk?.confidence ? Math.round(overallRisk.confidence * 100) : 85;
+  const estimateSource = overallRisk?.source || prediction.source || (prediction.aiGenerated ? 'ai_assisted' : null);
+  const rawConfidence = Number.parseFloat(overallRisk?.confidence ?? prediction.confidence);
+  const hasModelConfidence = estimateSource === 'ml_model' && Number.isFinite(rawConfidence);
+  const confidencePercent = hasModelConfidence ? Math.round(Math.min(Math.max(rawConfidence, 0), 1) * 100) : null;
+  const estimateLabel = overallRisk?.confidenceLabel || prediction.confidenceLabel || getEstimateLabel(estimateSource, prediction.aiGenerated);
+  const inputRows = [
+    { label: 'Glucose', value: formatInputValue(input?.glucose, ' mg/dL') },
+    { label: 'Blood Pressure', value: formatInputValue(firstProvided(input?.bloodPressure, input?.blood_pressure, input?.bp)) },
+    { label: 'BMI', value: formatInputValue(input?.bmi) },
+    { label: 'Sleep', value: formatInputValue(firstProvided(input?.sleepHours, input?.sleep), ' hrs') },
+    { label: 'Screen Time', value: formatInputValue(firstProvided(input?.screenHours, input?.screen), ' hrs/day') },
+    { label: 'Work Hours', value: formatInputValue(firstProvided(input?.workHours, input?.work), ' hrs/day') },
+    { label: 'Daily Activity', value: formatInputValue(firstProvided(input?.dailyActivityMinutes, input?.daily_activity, input?.exerciseMinutes, input?.activity), ' min') },
+    { label: 'Stress Level', value: formatInputValue(firstProvided(input?.stressLevel, input?.stress_level)) },
+    { label: 'Steps', value: formatInputValue(input?.steps) },
+    { label: 'Water Intake', value: formatInputValue(input?.waterIntake, ' L') },
+    { label: 'Smoking', value: formatInputValue(input?.smoking) },
+    { label: 'Alcohol', value: formatInputValue(input?.alcohol) },
+    { label: 'Family History', value: formatInputValue(firstProvided(input?.familyHistory, input?.family)) },
+    { label: 'Symptoms', value: formatInputValue(firstProvided(input?.symptoms, prediction.symptoms)) }
+  ];
 
   // Find primary condition
   const primaryCondition = results?.diabetes === 1 ? 'diabetes' : results?.bp === 1 ? 'bp' : results?.stress === 1 ? 'stress' : null;
@@ -58,7 +103,7 @@ const HealthResults = () => {
 
   // Circumference for donut
   const circumference = 2 * Math.PI * 40;
-  const dashOffset = circumference - (confidence / 100) * circumference;
+  const dashOffset = hasModelConfidence ? circumference - (confidencePercent / 100) * circumference : circumference;
 
   return (
     <div className="page-enter">
@@ -76,7 +121,41 @@ const HealthResults = () => {
         </Link>
       </div>
 
-      {/* Primary Prediction Card */}
+      {/* Guest Mode Warning Banner */}
+      {prediction.isSaved === false && (
+        <div style={{
+          background: 'rgba(234, 179, 8, 0.1)',
+          border: '1px solid rgba(234, 179, 8, 0.3)',
+          borderRadius: 'var(--radius-md)',
+          padding: '16px 20px',
+          marginBottom: '20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+            <div>
+              <strong style={{ color: '#854d0e', fontSize: '0.9rem' }}>Guest Mode Session</strong>
+              <p style={{ color: '#a16207', fontSize: '0.82rem', margin: '2px 0 0 0' }}>
+                This prediction will not be saved permanently. Create an account or sign in to save your history.
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <Link to="/login" className="btn-ghost" style={{ fontSize: '0.8rem', padding: '6px 12px', background: 'white' }}>
+              Sign In
+            </Link>
+            <Link to="/register" className="btn-primary" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
+              Create Account
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Primary Screening Card */}
       <div className="teal-card animate-fade-in-up" style={{
         padding: '32px',
         marginBottom: '28px',
@@ -88,10 +167,10 @@ const HealthResults = () => {
       }}>
         <div style={{ flex: 1, minWidth: '250px' }}>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '12px' }}>
-            {primaryLabel ? primaryLabel.riskLabel : 'Health Analysis Results'}
+            {primaryLabel ? primaryLabel.riskLabel : 'Wellness Screening Results'}
           </h1>
           <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '16px' }}>
-            Analysis completed on {new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+            Screening completed on {new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
 
           <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
@@ -106,7 +185,7 @@ const HealthResults = () => {
               gap: '6px',
               border: '1px solid rgba(255,255,255,0.3)'
             }}>
-              <FiCheckCircle size={14} /> VitalIQ AI Analysis
+              <FiCheckCircle size={14} /> VitalIQ Health Screening
             </span>
             {prediction.aiGenerated && (
               <span style={{
@@ -118,7 +197,7 @@ const HealthResults = () => {
                 fontWeight: 800,
                 boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
               }}>
-                PREMIUM AI
+                AI ASSISTED
               </span>
             )}
           </div>
@@ -138,33 +217,83 @@ const HealthResults = () => {
                 border: val === 1 ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(255,255,255,0.15)'
               }}>
                 {val === 1 ? <FiXCircle size={12} /> : <FiCheckCircle size={12} />}
-                {conditionLabels[key]?.name}: {val === 1 ? 'At Risk' : 'Normal'}
+                {conditionLabels[key]?.name}: {val === 1 ? 'Elevated Signal' : 'No Elevated Signal'}
               </span>
             ))}
           </div>
         </div>
 
-        {/* Confidence donut */}
+        {/* Estimate source / model confidence */}
         <div style={{ textAlign: 'center' }}>
-          <div className="circular-progress" style={{ width: '120px', height: '120px', margin: '0 auto 16px auto' }}>
-            <svg width="120" height="120" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
-              <circle cx="50" cy="50" r="40" fill="none" stroke="white" strokeWidth="8"
-                strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset}
-                style={{ transition: 'stroke-dashoffset 1s ease-out' }} />
-            </svg>
-            <div className="progress-text" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>{confidence}%</div>
-              <div style={{ fontSize: '0.65rem', opacity: 0.8, fontWeight: 500 }}>Confidence</div>
+          {hasModelConfidence ? (
+            <div className="circular-progress" style={{ width: '120px', height: '120px', margin: '0 auto 16px auto' }}>
+              <svg width="120" height="120" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="white" strokeWidth="8"
+                  strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset}
+                  style={{ transition: 'stroke-dashoffset 1s ease-out' }} />
+              </svg>
+              <div className="progress-text" style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>{confidencePercent}%</div>
+                <div style={{ fontSize: '0.65rem', opacity: 0.8, fontWeight: 500 }}>Model Confidence</div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div style={{
+              width: '180px',
+              minHeight: '96px',
+              margin: '0 auto 16px auto',
+              padding: '18px 16px',
+              borderRadius: '16px',
+              background: 'rgba(255,255,255,0.16)',
+              border: '1px solid rgba(255,255,255,0.28)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              gap: '6px'
+            }}>
+              <div style={{ fontSize: '0.68rem', opacity: 0.78, fontWeight: 700, textTransform: 'uppercase' }}>
+                Estimate Source
+              </div>
+              <div style={{ fontSize: '0.98rem', fontWeight: 800, lineHeight: 1.25 }}>
+                {estimateLabel}
+              </div>
+            </div>
+          )}
           <button 
             onClick={() => window.print()}
             className="btn-primary" 
             style={{ background: 'white', color: 'var(--primary)', fontWeight: 800, padding: '10px 20px', borderRadius: '12px' }}
           >
-            <FiDownload /> Export Report
+            <FiDownload /> Export Summary
           </button>
+        </div>
+      </div>
+
+      <div className="medical-card animate-fade-in-up" style={{ padding: '24px', marginBottom: '28px', animationDelay: '0.05s' }}>
+        <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '16px' }}>
+          Submitted Health Inputs
+        </h3>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '10px'
+        }}>
+          {inputRows.map(item => (
+            <div key={item.label} style={{
+              padding: '10px 12px',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px'
+            }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                {item.label}
+              </div>
+              <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                {item.value}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -178,7 +307,7 @@ const HealthResults = () => {
           {/* Detailed Breakdown */}
           <div className="medical-card animate-fade-in-up" style={{ padding: '24px', animationDelay: '0.1s', opacity: 0 }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px' }}>
-              Condition Analysis
+              Wellness Signal Analysis
             </h3>
 
             {Object.entries(results || {}).map(([key, val]) => {
@@ -209,7 +338,7 @@ const HealthResults = () => {
                       background: val === 1 ? '#fca5a5' : '#a7f3d0',
                       color: val === 1 ? '#991b1b' : '#065f46'
                     }}>
-                      {val === 1 ? 'At Risk' : 'Normal'}
+                      {val === 1 ? 'Elevated Signal' : 'No Elevated Signal'}
                     </span>
                   </div>
                   
@@ -270,7 +399,7 @@ const HealthResults = () => {
               border: '1px solid #bae6fd'
             }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', color: '#0369a1' }}>
-                💡 VitalIQ AI Insights
+                💡 VitalIQ Health Insights
               </h3>
               <ul style={{ padding: '0 0 0 20px', margin: 0 }}>
                 {overallRisk.insights.map((insight, i) => (
@@ -341,8 +470,8 @@ const HealthResults = () => {
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
               <FiAlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div>
-                <strong>IMPORTANT DISCLAIMER: </strong>
-                This analysis is generated by an AI model and is NOT a medical diagnosis. It is intended for informational purposes only and should not replace professional medical advice.
+                <strong>Important wellness disclaimer: </strong>
+                {DISCLAIMER}
               </div>
             </div>
           </div>
@@ -357,7 +486,7 @@ const HealthResults = () => {
         marginTop: '28px'
       }} className="animate-fade-in-up" >
         <Link to="/health-check" className="btn-primary" style={{ justifyContent: 'center' }}>
-          New Health Check
+          New Wellness Screening
         </Link>
         <Link to="/history" className="btn-secondary" style={{ justifyContent: 'center' }}>
           View All History
@@ -367,10 +496,10 @@ const HealthResults = () => {
           className="btn-ghost" 
           style={{ justifyContent: 'center', fontWeight: 700, color: 'var(--primary)' }}
         >
-          <FiDownload size={16} /> Download Official Report
+          <FiDownload size={16} /> Download Wellness Summary
         </button>
         <button className="btn-ghost" style={{ justifyContent: 'center' }}>
-          <FiShare2 size={16} /> Share with Doctor
+          <FiShare2 size={16} /> Discuss with a Professional
         </button>
       </div>
 

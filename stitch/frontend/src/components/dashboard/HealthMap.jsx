@@ -67,9 +67,9 @@ const HealthMap = () => {
   const [userPos, setUserPos] = useState(null);
 
   const points = [
-    { id: 1, lat: 40.7128, lng: -74.0060, title: 'Flu Alert (High)', detail: 'High incidence of viral fever in the Downtown area.', severity: 'high', color: '#ef4444' },
+    { id: 1, lat: 40.7128, lng: -74.0060, title: 'Wellness Alert (High)', detail: 'Community wellness reports are elevated in the Downtown area.', severity: 'high', color: '#ef4444' },
     { id: 2, lat: 40.7306, lng: -73.9352, title: 'Air Quality Alert', detail: 'AQI is 185 (Unhealthy). Wear a mask for outdoor activities.', severity: 'medium', color: '#f59e0b' },
-    { id: 3, lat: 40.6782, lng: -73.9442, title: 'Vaccination Camp', detail: 'Free health screening available at City Center Mall.', severity: 'low', color: '#10b981' },
+    { id: 3, lat: 40.6782, lng: -73.9442, title: 'Community Wellness Camp', detail: 'Free wellness screening available at City Center Mall.', severity: 'low', color: '#10b981' },
     { id: 4, lat: 40.7589, lng: -73.9851, title: 'Wellness Zone', detail: 'High density of community fitness activities reported.', severity: 'low', color: '#10b981' }
   ];
 
@@ -138,7 +138,7 @@ const HealthMap = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
           <div style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '50%', animation: 'pulse-soft 2s infinite' }}></div>
           <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.3px' }}>
-            Live Regional Health Pulse
+            Live Regional Wellness Pulse
           </h4>
         </div>
         <div style={{ display: 'flex', gap: '16px' }}>

@@ -46,7 +46,7 @@ const Navbar = () => {
             color: 'var(--primary)',
             letterSpacing: '-0.5px'
           }}>
-            stitch
+            VitalIQ Health
           </span>
         </Link>
 

@@ -1,6 +1,14 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { validationResult, body } = require('express-validator');
 const User = require('../models/User');
+
+const OTP_SALT_ROUNDS = 10;
+const REGISTER_OTP_TTL_MS = 10 * 60 * 1000;
+const FORGOT_PASSWORD_RESPONSE = {
+  success: true,
+  message: 'If this email exists, an OTP has been sent.'
+};
 
 // Generate JWT
 const generateToken = (id) => {
@@ -9,8 +17,60 @@ const generateToken = (id) => {
   });
 };
 
+const buildGuestUser = (id) => ({
+  id,
+  name: 'Guest User',
+  email: 'guest@vitaliq.local',
+  role: 'guest',
+  isGuest: true
+});
+
 const PendingOtp = require('../models/PendingOtp');
 const { sendOtpEmail } = require('../services/emailService');
+
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const hashOtp = async (otp) => bcrypt.hash(String(otp), OTP_SALT_ROUNDS);
+
+const compareOtp = async (otp, hashedOtp) => {
+  if (!otp || !hashedOtp) return false;
+
+  try {
+    return await bcrypt.compare(String(otp), hashedOtp);
+  } catch (error) {
+    return false;
+  }
+};
+
+const invalidOtpResponse = (res) => {
+  return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+};
+
+// @desc    Start temporary guest session
+// @route   POST /api/auth/guest
+exports.guestLogin = async (req, res) => {
+  try {
+    const id = `guest-${Date.now()}`;
+    const token = jwt.sign(
+      {
+        id,
+        role: 'guest',
+        isGuest: true
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '2h' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Guest session started',
+      token,
+      user: buildGuestUser(id)
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Guest login is temporarily unavailable' });
+  }
+};
 
 // @desc    Send Registration OTP
 // @route   POST /api/auth/send-register-otp
@@ -25,12 +85,13 @@ exports.sendRegisterOtp = async (req, res) => {
     }
 
     // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = generateOtp();
+    const hashedOtp = await hashOtp(otp);
     
     // Save to PendingOtp (updates if exists)
     await PendingOtp.findOneAndUpdate(
       { email },
-      { otp, createdAt: Date.now() },
+      { otp: hashedOtp, createdAt: new Date() },
       { upsert: true, new: true }
     );
 
@@ -53,10 +114,14 @@ exports.register = [
     try {
       const { name, email, password, age, gender, height, weight, otp } = req.body;
 
-      // Verify OTP
-      const pending = await PendingOtp.findOne({ email, otp });
-      if (!pending) {
-        return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      const pending = await PendingOtp.findOne({
+        email,
+        createdAt: { $gt: new Date(Date.now() - REGISTER_OTP_TTL_MS) }
+      });
+      const isOtpValid = await compareOtp(otp, pending?.otp);
+
+      if (!isOtpValid) {
+        return invalidOtpResponse(res);
       }
 
       // Delete OTP
@@ -103,8 +168,8 @@ exports.login = [
       }
 
       // Generate 6-digit OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      user.otp = otp;
+      const otp = generateOtp();
+      user.otp = await hashOtp(otp);
       user.otpExpire = Date.now() + 10 * 60 * 1000; // 10 mins
       await user.save();
 
@@ -128,10 +193,11 @@ exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    const user = await User.findOne({ email, otp, otpExpire: { $gt: Date.now() } });
+    const user = await User.findOne({ email, otpExpire: { $gt: Date.now() } });
+    const isOtpValid = await compareOtp(otp, user?.otp);
     
-    if (!user) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    if (!user || !isOtpValid) {
+      return invalidOtpResponse(res);
     }
 
     // Clear OTP
@@ -143,6 +209,7 @@ exports.verifyOtp = async (req, res) => {
 
     res.json({
       success: true,
+      message: 'OTP verified successfully',
       token,
       user: {
         id: user._id,
@@ -168,21 +235,28 @@ exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Forgot password requested for non-existent email.');
+      }
+      return res.json(FORGOT_PASSWORD_RESPONSE);
     }
 
     // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.otp = otp;
+    const otp = generateOtp();
+    user.otp = await hashOtp(otp);
     user.otpExpire = Date.now() + 10 * 60 * 1000; // 10 mins
     await user.save();
 
     // Send Email
     await sendOtpEmail(email, otp);
 
-    res.json({ success: true, message: 'OTP sent to email' });
+    res.json(FORGOT_PASSWORD_RESPONSE);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -198,10 +272,11 @@ exports.resetPassword = [
     try {
       const { email, otp, newPassword } = req.body;
 
-      const user = await User.findOne({ email, otp, otpExpire: { $gt: Date.now() } });
+      const user = await User.findOne({ email, otpExpire: { $gt: Date.now() } });
+      const isOtpValid = await compareOtp(otp, user?.otp);
       
-      if (!user) {
-        return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      if (!user || !isOtpValid) {
+        return invalidOtpResponse(res);
       }
 
       // Update password
@@ -217,6 +292,17 @@ exports.resetPassword = [
   }
 ];
 
+function anonymizeName(name = "VitalIQ User") {
+  const trimmed = String(name).trim();
+  if (trimmed === 'Guest User') return 'Guest';
+  const parts = trimmed.split(" ");
+  if (parts.length === 1) return parts[0];
+  if (parts[1] && parts[1][0]) {
+    return `${parts[0]} ${parts[1][0]}.`;
+  }
+  return parts[0];
+}
+
 // @desc    Get leaderboard (Top users by points)
 // @route   GET /api/auth/leaderboard
 exports.getLeaderboard = async (req, res) => {
@@ -227,11 +313,11 @@ exports.getLeaderboard = async (req, res) => {
       .select('name points currentStreak');
 
     const leaderboard = users.map((u, index) => ({
-      rank: index + 1,
-      name: u.name,
-      points: u.points,
+      position: index + 1,
+      displayName: anonymizeName(u.name),
+      wellnessPoints: u.points,
       streak: u.currentStreak,
-      level: u.points >= 4000 ? 'Elite' : u.points >= 3000 ? 'Expert' : u.points >= 1000 ? 'Pro' : 'Beginner',
+      badge: u.points >= 4000 ? 'Elite' : u.points >= 3000 ? 'Expert' : u.points >= 1000 ? 'Pro' : 'Beginner',
       isUser: req.user && u._id.toString() === req.user._id.toString()
     }));
 
@@ -245,6 +331,33 @@ exports.getLeaderboard = async (req, res) => {
 // @route   GET /api/auth/profile
 exports.getProfile = async (req, res) => {
   try {
+    if (req.user?.isGuest) {
+      return res.json({
+        success: true,
+        user: buildGuestUser(req.user.id)
+      });
+    }
+
+    if (req.user?.isMockGoogle) {
+      return res.json({
+        success: true,
+        user: {
+          id: req.user.id,
+          name: req.user.name,
+          email: req.user.email,
+          role: req.user.role,
+          isMockGoogle: true,
+          age: req.user.age,
+          gender: req.user.role === 'guest' ? 'other' : req.user.gender,
+          height: req.user.height,
+          weight: req.user.weight,
+          points: req.user.points,
+          currentStreak: req.user.currentStreak,
+          longestStreak: req.user.longestStreak
+        }
+      });
+    }
+
     const user = await User.findById(req.user._id);
     res.json({
       success: true,

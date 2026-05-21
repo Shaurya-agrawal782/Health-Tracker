@@ -2,7 +2,7 @@
  * Rule-Based Risk Calculator
  * 
  * Produces output in ML-compatible format:
- * { level, score, confidence, factors[], explanation }
+ * { level, score, confidence, confidenceLabel, source, factors[], explanation }
  * 
  * Can be seamlessly replaced with ML API call later.
  */
@@ -30,9 +30,9 @@ const calculateRisk = (healthData, user) => {
   if (healthData.sleepHours < 5) {
     score += 25;
     factors.push({
-      factor: 'Critical Sleep Deficit',
+      factor: 'Very Low Sleep Duration',
       impact: '+25%',
-      detail: `Only ${healthData.sleepHours}hrs sleep — severely increases health risks`,
+      detail: `Only ${healthData.sleepHours}hrs sleep — strongly associated with lower day-to-day wellness`,
       severity: 'critical'
     });
   } else if (healthData.sleepHours < 6) {
@@ -57,9 +57,9 @@ const calculateRisk = (healthData, user) => {
   if (healthData.stressLevel >= 9) {
     score += 25;
     factors.push({
-      factor: 'Extreme Stress',
+      factor: 'Very High Stress',
       impact: '+25%',
-      detail: `Stress level ${healthData.stressLevel}/10 — seek immediate stress management`,
+      detail: `Stress level ${healthData.stressLevel}/10 — consider immediate stress-reduction support`,
       severity: 'critical'
     });
   } else if (healthData.stressLevel >= 7) {
@@ -67,7 +67,7 @@ const calculateRisk = (healthData, user) => {
     factors.push({
       factor: 'High Stress',
       impact: '+20%',
-      detail: `Stress level ${healthData.stressLevel}/10 — significantly elevates health risk`,
+      detail: `Stress level ${healthData.stressLevel}/10 — may elevate lifestyle risk signals`,
       severity: 'high'
     });
   } else if (healthData.stressLevel >= 5) {
@@ -111,9 +111,9 @@ const calculateRisk = (healthData, user) => {
   if (bmi >= 35) {
     score += 15;
     factors.push({
-      factor: 'Severely High BMI',
+      factor: 'Very High BMI',
       impact: '+15%',
-      detail: `BMI ${bmi} (${getBMICategory(bmi)}) — significant health risk factor`,
+      detail: `BMI ${bmi} (${getBMICategory(bmi)}) — associated with elevated lifestyle risk signals`,
       severity: 'critical'
     });
   } else if (bmi >= 30) {
@@ -121,7 +121,7 @@ const calculateRisk = (healthData, user) => {
     factors.push({
       factor: 'High BMI',
       impact: '+12%',
-      detail: `BMI ${bmi} (${getBMICategory(bmi)}) — elevated risk for chronic diseases`,
+      detail: `BMI ${bmi} (${getBMICategory(bmi)}) — associated with elevated lifestyle risk signals`,
       severity: 'high'
     });
   } else if (bmi >= 25) {
@@ -129,7 +129,7 @@ const calculateRisk = (healthData, user) => {
     factors.push({
       factor: 'Elevated BMI',
       impact: '+5%',
-      detail: `BMI ${bmi} (${getBMICategory(bmi)}) — slight risk increase`,
+      detail: `BMI ${bmi} (${getBMICategory(bmi)}) — slightly elevated wellness risk signal`,
       severity: 'medium'
     });
   } else if (bmi < 18.5) {
@@ -137,7 +137,7 @@ const calculateRisk = (healthData, user) => {
     factors.push({
       factor: 'Underweight BMI',
       impact: '+8%',
-      detail: `BMI ${bmi} (${getBMICategory(bmi)}) — may indicate nutritional deficiency`,
+      detail: `BMI ${bmi} (${getBMICategory(bmi)}) — may suggest nutrition or weight-management support needs`,
       severity: 'medium'
     });
   }
@@ -148,7 +148,7 @@ const calculateRisk = (healthData, user) => {
     factors.push({
       factor: 'Smoking',
       impact: '+15%',
-      detail: 'Active smoker — major risk factor for heart & lung disease',
+      detail: 'Active smoking — associated with higher long-term wellness risk signals',
       severity: 'critical'
     });
   }
@@ -159,7 +159,7 @@ const calculateRisk = (healthData, user) => {
     factors.push({
       factor: 'Alcohol Consumption',
       impact: '+10%',
-      detail: 'Regular alcohol use — increases liver and cardiovascular risk',
+      detail: 'Regular alcohol use — associated with higher lifestyle risk signals',
       severity: 'high'
     });
   }
@@ -170,7 +170,7 @@ const calculateRisk = (healthData, user) => {
     factors.push({
       factor: 'Poor Diet Quality',
       impact: '+10%',
-      detail: 'Junk food diet — increases risk for obesity, diabetes, heart disease',
+      detail: 'Frequent highly processed foods — associated with higher lifestyle risk signals',
       severity: 'high'
     });
   }
@@ -214,9 +214,6 @@ const calculateRisk = (healthData, user) => {
   else if (score >= 30) level = 'Medium';
   else level = 'Low';
 
-  // Calculate pseudo-confidence (higher with more data points showing risk)
-  const confidence = +(0.65 + (factors.length * 0.04)).toFixed(2);
-
   // Generate explanation string
   const topFactors = factors
     .sort((a, b) => {
@@ -230,9 +227,11 @@ const calculateRisk = (healthData, user) => {
   return {
     level,
     score,
-    confidence: Math.min(confidence, 0.95),
+    confidence: null,
+    confidenceLabel: 'Rule-based wellness estimate',
+    source: 'rule_based',
     factors,
-    explanation: topFactors ? `Key risk drivers: ${topFactors}` : 'No significant risk factors detected',
+    explanation: topFactors ? `Key wellness risk signals: ${topFactors}` : 'No elevated wellness risk signals were flagged',
     bmi,
     bmiCategory: getBMICategory(bmi),
     assessedAt: new Date().toISOString()

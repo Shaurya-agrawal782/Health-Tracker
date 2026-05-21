@@ -4,6 +4,10 @@ const User = require('../models/User');
 const { calculateRisk } = require('../utils/riskCalculator');
 const { generateRecommendations } = require('../utils/recommendationEngine');
 
+const getInputValue = (input, standardField, legacyField, fallback = '?') => {
+  return input?.[standardField] ?? input?.[legacyField] ?? fallback;
+};
+
 // @desc    Get personalized recommendations
 // @route   GET /api/recommendations
 exports.getRecommendations = async (req, res) => {
@@ -40,16 +44,16 @@ exports.getRecommendations = async (req, res) => {
 
       if (r.diabetes === 1 && !recommendations.find(rec => rec.category === 'diabetes')) {
         recommendations.push({
-          title: 'Manage Diabetes Risk',
+          title: 'Support Glucose Wellness',
           category: 'diabetes',
           priority: 'high',
-          reason: `Your latest screening detected diabetes risk (glucose: ${input.glucose || 'elevated'} mg/dL).`,
+          reason: `Your latest screening flagged an elevated glucose-related wellness signal (glucose: ${input.glucose || 'elevated'} mg/dL).`,
           actions: [
-            'Monitor fasting blood glucose weekly',
+            'Track blood glucose trends if you already monitor them',
             'Reduce refined sugar and white carbs',
             'Eat more fiber: oats, lentils, vegetables',
-            'Walk for 30 minutes after meals to lower glucose spikes',
-            'Schedule an HbA1c test with your doctor'
+            'Walk for 30 minutes after meals to support glucose regulation',
+            'Discuss follow-up testing with a qualified healthcare professional if you are concerned'
           ],
           icon: '🩸'
         });
@@ -57,33 +61,35 @@ exports.getRecommendations = async (req, res) => {
 
       if (r.bp === 1 && !recommendations.find(rec => rec.category === 'bp')) {
         recommendations.push({
-          title: 'Control Blood Pressure',
+          title: 'Support Blood Pressure Wellness',
           category: 'bp',
           priority: 'high',
-          reason: 'Your screening indicates elevated blood pressure risk.',
+          reason: 'Your screening indicates an elevated blood-pressure-related wellness signal.',
           actions: [
             'Reduce salt intake to under 5g/day',
             'Eat potassium-rich foods: bananas, spinach, sweet potatoes',
             'Practice deep breathing for 5 minutes, twice daily',
             'Limit caffeine to 2 cups/day',
-            'Check blood pressure at home weekly'
+            'Track blood pressure trends if you already monitor them'
           ],
           icon: '❤️'
         });
       }
 
       if (r.stress === 1 && !recommendations.find(rec => rec.title === 'Manage Your Stress')) {
+        const sleepHours = getInputValue(input, 'sleepHours', 'sleep');
+        const workHours = getInputValue(input, 'workHours', 'work');
         recommendations.push({
-          title: 'Reduce Chronic Stress',
+          title: 'Support Stress Recovery',
           category: 'stress',
           priority: 'high',
-          reason: `Sleep ${input.sleep || '?'}hrs and work ${input.work || '?'}hrs/day indicate high stress load.`,
+          reason: `Sleep ${sleepHours}hrs and work ${workHours}hrs/day suggest an elevated stress-related lifestyle signal.`,
           actions: [
             'Set a hard stop for work — no screens after 9 PM',
             'Try box breathing: 4s inhale, 4s hold, 4s exhale, 4s hold',
             'Take a 15-minute nature walk during lunch',
             'Journal 3 things you are grateful for each night',
-            'Consider talking to a counselor if stress persists'
+            'Consider talking to a qualified professional if stress persists'
           ],
           icon: '🧘'
         });
@@ -97,7 +103,7 @@ exports.getRecommendations = async (req, res) => {
               title: rec,
               category: 'screening',
               priority: i < 2 ? 'high' : 'medium',
-              reason: 'Based on your latest AI health screening.',
+              reason: 'Based on your latest AI-assisted wellness screening.',
               actions: [],
               icon: '🔬'
             });
@@ -116,7 +122,7 @@ exports.getRecommendations = async (req, res) => {
           reason: 'No health data logged yet.',
           actions: [
             'Log your first daily health entry',
-            'Complete an AI health screening',
+            'Complete an AI-assisted wellness screening',
             'Get personalized recommendations based on your data'
           ],
           icon: '📊'

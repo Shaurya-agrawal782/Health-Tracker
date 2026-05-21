@@ -63,14 +63,14 @@ const Dashboard = () => {
           </h1>
           <p style={{ fontSize: '1.05rem', opacity: 0.9, maxWidth: '600px', lineHeight: 1.6 }}>
             {isNewUser ? (
-              "Welcome to VitalIQ! Complete your first health check to see your AI health score and start your wellness journey."
+              "Welcome to VitalIQ Health! Complete your first wellness screening to see your wellness score and start your journey."
             ) : (
-              <>Your VitalIQ score is <strong>{userHealthScore}/100</strong> today. Keep tracking to stay on top of your health!</>
+              <>Your wellness score is <strong>{userHealthScore}/100</strong> today. Keep tracking to stay on top of your health!</>
             )}
           </p>
           <div style={{ display: 'flex', gap: '16px', marginTop: '32px' }}>
             <Link to="/health-check" className="btn-primary" style={{ background: 'white', color: '#0d9488', fontWeight: 800, padding: '14px 28px' }}>
-              <FiPlusCircle /> New Health Check
+              <FiPlusCircle /> New Wellness Screening
             </Link>
             <Link to="/insights" style={{ color: 'white', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem' }}>
               View Trends <FiArrowRight />
@@ -111,10 +111,10 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* VitalIQ Goals Card */}
+        {/* Wellness Goals Card */}
         <div className="medical-card" style={{ padding: '24px', background: '#f0fdfa', border: '1px solid #99f6e4' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#064e3b' }}>VitalIQ Goals</h3>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#064e3b' }}>Wellness Goals</h3>
             <FiTarget color="#0d9488" size={20} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -140,7 +140,7 @@ const Dashboard = () => {
         {/* Daily Insight Card */}
         <div className="medical-card" style={{ padding: '24px', background: '#0f172a', color: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ color: '#2dd4bf', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '1px' }}>
-            <FiZap /> VitalIQ Daily Insight
+            <FiZap /> Daily Wellness Insight
           </div>
           <p style={{ fontSize: '1.1rem', fontWeight: 600, lineHeight: 1.5, marginBottom: '20px' }}>
             "Walking for just 10 minutes after a meal can lower your blood sugar spike by up to 12%."
@@ -154,13 +154,13 @@ const Dashboard = () => {
       {/* 📜 History Section: Visible and Interactive */}
       <div className="medical-card" style={{ padding: '32px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Recent Health History</h3>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Recent Wellness History</h3>
           <Link to="/history" style={{ fontSize: '0.9rem', color: '#0d9488', fontWeight: 700, textDecoration: 'none' }}>See All History</Link>
         </div>
         {checks.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0', border: '2px dashed #f1f5f9', borderRadius: '16px' }}>
             <FiActivity size={40} color="#cbd5e1" style={{ marginBottom: '16px' }} />
-            <p style={{ color: '#64748b' }}>No health checks yet. Start your first AI screening today!</p>
+            <p style={{ color: '#64748b' }}>No wellness screenings yet. Start your first AI-assisted screening today!</p>
             <Link to="/health-check" className="btn-primary" style={{ marginTop: '20px', display: 'inline-flex' }}>Start Screening</Link>
           </div>
         ) : (

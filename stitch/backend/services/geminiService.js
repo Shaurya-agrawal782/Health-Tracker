@@ -1,22 +1,54 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+
 /**
  * Gemini AI Service for Health Analysis
  * Falls back gracefully to null when API key is missing or invalid.
  */
 class GeminiService {
   constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
-      console.log("ℹ️  VitalIQ: No Gemini API key — using intelligent rule-based analysis.");
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    this.modelName = getConfiguredModelName();
+    this.validated = false;
+
+    if (!apiKey || apiKey === 'YOUR_API_KEY_HERE' || apiKey === 'your_gemini_api_key_here') {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn("VitalIQ Health AI: GEMINI_API_KEY is missing. Gemini is disabled; using rule-based analysis and offline coach responses.");
+      }
       this.genAI = null;
       this.disabled = true;
-    } else {
+      return;
+    }
+
+    try {
       this.genAI = new GoogleGenerativeAI(apiKey);
       this.disabled = false;
-      this.validated = false; // will validate on first call
-      console.log("🚀 VitalIQ AI: Gemini Service Initialized.");
+      console.log(`VitalIQ Health AI: Gemini service initialized with model ${this.modelName}.`);
+    } catch (error) {
+      console.warn("VitalIQ Health AI: Failed to initialize Gemini. Falling back to rule-based analysis and offline coach responses.", error.message);
+      this.genAI = null;
+      this.disabled = true;
     }
+  }
+
+  getModel() {
+    if (this.disabled || !this.genAI) return null;
+    return this.genAI.getGenerativeModel({ model: this.modelName });
+  }
+
+  handleGeminiError(error, operation) {
+    const status = error?.status || error?.response?.status;
+    const message = error?.message || 'Unknown Gemini error';
+
+    if (status === 401 || status === 403) {
+      console.warn(`VitalIQ Health AI: Gemini authentication failed during ${operation}. Disabling Gemini for this session.`);
+      this.disabled = true;
+      this.genAI = null;
+      return;
+    }
+
+    console.warn(`VitalIQ Health AI: Gemini ${operation} failed with model ${this.modelName}. Falling back safely. ${message.slice(0, 160)}`);
   }
 
   /**
@@ -26,44 +58,56 @@ class GeminiService {
     if (this.disabled || !this.genAI) return null;
 
     try {
-      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = this.getModel();
+      if (!model) return null;
 
       const prompt = `
-        As a professional health analysis AI, analyze the following daily health log for a user:
+        As a wellness risk-screening assistant, review the following daily lifestyle log for a user.
+        Treat all results as AI-assisted wellness guidance, not medical diagnosis, diagnostic forecasting, or treatment advice.
         
         User Profile:
-        - Age: ${user.age}
-        - Gender: ${user.gender}
-        - Weight: ${user.weight}kg
-        - Height: ${user.height}cm
+        - Age: ${formatPromptValue(healthData.age || user.age)}
+        - Gender: ${formatPromptValue(healthData.gender || user.gender)}
         
         Daily Health Data:
-        - Sleep: ${healthData.sleepHours} hours
-        - Stress Level: ${healthData.stressLevel}/10
-        - Exercise: ${healthData.exerciseMinutes} minutes
-        - Steps: ${healthData.steps}
-        - Water Intake: ${healthData.waterIntake}L
-        - Smoking: ${healthData.smoking ? 'Yes' : 'No'}
-        - Alcohol: ${healthData.alcohol ? 'Yes' : 'No'}
-        - Diet: ${healthData.dietType}
+        - BMI: ${formatPromptValue(healthData.bmi)}
+        - Glucose: ${formatPromptValue(healthData.glucose)}
+        - Blood Pressure: ${formatPromptValue(healthData.bloodPressure)}
+        - Sleep Hours: ${formatPromptValue(healthData.sleepHours)}
+        - Screen Hours: ${formatPromptValue(healthData.screenHours)}
+        - Work Hours: ${formatPromptValue(healthData.workHours)}
+        - Daily Activity Minutes: ${formatPromptValue(healthData.dailyActivityMinutes)}
+        - Stress Level: ${formatPromptValue(healthData.stressLevel)}
+        - Steps: ${formatPromptValue(healthData.steps)}
+        - Water Intake: ${formatPromptValue(healthData.waterIntake)}
+        - Smoking: ${formatPromptValue(booleanToYesNo(healthData.smoking))}
+        - Alcohol: ${formatPromptValue(booleanToYesNo(healthData.alcohol))}
+        - Family History: ${formatPromptValue(healthData.familyHistory)}
+        - Symptoms: ${formatPromptValue(formatSymptoms(healthData.symptoms))}
         
-        Please provide a comprehensive health risk analysis in JSON format:
+        Please provide a lifestyle-based wellness risk estimate in JSON format:
         {
           "level": "Low" | "Medium" | "High",
           "score": 0-100,
-          "confidence": 0.0-1.0,
-          "explanation": "Brief summary of the primary health drivers",
+          "explanation": "Brief summary of the primary lifestyle drivers for the wellness risk estimate",
           "insights": [
-            "Specific, nuanced health insights based on the data correlation"
+            "Specific, nuanced wellness insights based on lifestyle trend analysis"
           ],
           "recommendations": [
-            "Actionable, personalized lifestyle advice"
+            "Actionable, personalized wellness recommendations"
           ],
           "micro_hacks": [
-            "Quick, 5-minute health improvements for today"
+            "Quick, 5-minute wellness actions for today"
           ]
         }
         
+        Safety rules:
+        - Never say you diagnose, treat, cure, or forecast disease.
+        - Explain results as wellness guidance and lifestyle-based risk estimation only.
+        - Do not provide medication, dosage, supplement dosage, or treatment instructions.
+        - Provide safe lifestyle suggestions only.
+        - For serious symptoms or medical concerns, recommend consulting a qualified healthcare professional.
+        - Include this disclaimer in the explanation when appropriate: "VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional."
         Ensure the JSON is valid and the tone is professional yet encouraging.
       `;
 
@@ -80,14 +124,7 @@ class GeminiService {
       
       throw new Error("Failed to parse AI response");
     } catch (error) {
-      // If the API key is invalid, disable permanently to avoid spam
-      if (error.status === 400 || error.status === 403) {
-        console.log("⚠️  Gemini API key is invalid. Disabling AI — using rule-based analysis for this session.");
-        this.disabled = true;
-        this.genAI = null;
-      } else {
-        console.log("⚠️  Gemini temporary error:", error.message?.slice(0, 80));
-      }
+      this.handleGeminiError(error, 'health analysis');
       return null;
     }
   }
@@ -101,7 +138,10 @@ class GeminiService {
     }
 
     try {
-      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = this.getModel();
+      if (!model) {
+        return generateOfflineCoachResponse(getLatestMessageContent(messages));
+      }
       const chat = model.startChat({
         history: [],
         generationConfig: {
@@ -110,32 +150,56 @@ class GeminiService {
       });
 
       const systemPrompt = `
-        You are "VitalIQ", a friendly and intelligent AI Health Coach for the VitalIQ Health platform.
-        Your goal is to help users understand their health data and provide motivation.
+        You are "VitalIQ", a friendly AI-assisted wellness coach for the VitalIQ Health platform.
+        Your goal is to help users understand lifestyle trends, wellness risk estimates, and safe habit options.
         
         Current User Context:
         ${JSON.stringify(context)}
         
         Rules:
         1. Be encouraging and empathetic.
-        2. Keep advice actionable and evidence-based.
-        3. ALWAYS include a medical disclaimer for specific health concerns.
-        4. Use emojis occasionally to stay friendly.
-        5. If you don't know something or it's a serious medical issue, advise seeing a doctor.
+        2. Explain results as wellness guidance, not a diagnosis or diagnostic forecast.
+        3. Never claim to diagnose, treat, cure, or replace professional medical advice.
+        4. Do not provide medication, dosage, supplement dosage, or treatment instructions.
+        5. Provide safe lifestyle suggestions only.
+        6. For serious symptoms, urgent issues, or medical concerns, recommend consulting a qualified healthcare professional.
+        7. Include this disclaimer when discussing health concerns: "VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional."
+        8. Use emojis occasionally to stay friendly.
       `;
 
-      const userMessage = messages[messages.length - 1].content;
+      const userMessage = getLatestMessageContent(messages);
       const result = await chat.sendMessage(`${systemPrompt}\n\nUser Question: ${userMessage}`);
       const response = await result.response;
       return response.text();
     } catch (error) {
-      if (error.status === 400 || error.status === 403) {
-        this.disabled = true;
-        this.genAI = null;
-      }
-      return generateOfflineCoachResponse(messages[messages.length - 1]?.content || '');
+      this.handleGeminiError(error, 'coach chat');
+      return generateOfflineCoachResponse(getLatestMessageContent(messages));
     }
   }
+}
+
+function getConfiguredModelName() {
+  return (process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL).trim() || DEFAULT_GEMINI_MODEL;
+}
+
+function getLatestMessageContent(messages) {
+  if (!Array.isArray(messages) || messages.length === 0) return '';
+  return messages[messages.length - 1]?.content || '';
+}
+
+function formatPromptValue(value) {
+  if (value === undefined || value === null || value === '') return 'Not provided';
+  return value;
+}
+
+function booleanToYesNo(value) {
+  if (value === undefined || value === null || value === '') return null;
+  return value ? 'Yes' : 'No';
+}
+
+function formatSymptoms(symptoms) {
+  if (!Array.isArray(symptoms) || symptoms.length === 0) return null;
+  return symptoms.join(', ');
 }
 
 /**
@@ -151,7 +215,7 @@ function generateOfflineCoachResponse(question) {
       "3. **Keep your room cool** (18-20°C) and dark\n" +
       "4. **Try the 4-7-8 breathing technique** before sleep\n\n" +
       "💡 Aim for 7-9 hours. Quality matters as much as quantity!\n\n" +
-      "⚕️ *If sleep problems persist for more than 2 weeks, please consult a doctor.*";
+      "*VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.*";
   }
 
   if (q.includes('stress') || q.includes('anxiety') || q.includes('worried')) {
@@ -160,28 +224,28 @@ function generateOfflineCoachResponse(question) {
       "2. **Take a 10-minute walk** in nature\n" +
       "3. **Journal** 3 things you're grateful for tonight\n" +
       "4. **Limit social media** to 30 min/day\n\n" +
-      "Your VitalIQ score improves when stress goes down! 💪\n\n" +
-      "⚕️ *If anxiety is affecting your daily life, please reach out to a mental health professional.*";
+      "Your wellness score improves when stress goes down! 💪\n\n" +
+      "*VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.*";
   }
 
   if (q.includes('diet') || q.includes('food') || q.includes('eat') || q.includes('weight')) {
-    return "🥗 Nutrition is medicine! Here's what I recommend:\n\n" +
+    return "🥗 Nutrition can support everyday wellness. Here's what I recommend:\n\n" +
       "1. **Follow the plate method**: ½ veggies, ¼ protein, ¼ whole grains\n" +
       "2. **Drink water before meals** — helps portion control\n" +
       "3. **Eat slowly** — it takes 20 min for your brain to feel full\n" +
       "4. **Prep healthy snacks**: nuts, fruits, yogurt\n\n" +
       "Small changes beat extreme diets every time! 🎯\n\n" +
-      "⚕️ *For personalized nutrition advice, consult a registered dietitian.*";
+      "*VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.*";
   }
 
   if (q.includes('exercise') || q.includes('workout') || q.includes('gym') || q.includes('walk')) {
-    return "🏃 Movement is the best medicine! Here's your action plan:\n\n" +
+    return "🏃 Movement is a strong wellness habit. Here's your action plan:\n\n" +
       "1. **Start with 10 min walks** after meals — reduces blood sugar spikes by 12%\n" +
       "2. **Aim for 150 min/week** of moderate activity\n" +
       "3. **Include strength training** 2-3x per week\n" +
       "4. **Take stairs** over elevators whenever possible\n\n" +
-      "Every step counts toward your VitalIQ goals! 🏆\n\n" +
-      "⚕️ *If you have any medical conditions, consult your doctor before starting a new exercise program.*";
+      "Every step counts toward your wellness goals! 🏆\n\n" +
+      "*VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.*";
   }
 
   return "👋 Hi! I'm your VitalIQ Health Coach. I'm here to help you with:\n\n" +
@@ -190,8 +254,8 @@ function generateOfflineCoachResponse(question) {
     "• 🥗 **Nutrition** — Healthy eating advice\n" +
     "• 🏃 **Exercise** — Activity recommendations\n" +
     "• 📊 **Your Data** — Understanding your health scores\n\n" +
-    "Ask me anything about your health! Remember, I provide guidance — " +
-    "for medical concerns, always consult a healthcare professional. 💚";
+    "Ask me anything about wellness trends and healthier habits. " +
+    "VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.";
 }
 
 module.exports = new GeminiService();

@@ -1,4 +1,5 @@
 const axios = require('axios');
+const mongoose = require('mongoose');
 const Prediction = require('../models/Prediction');
 const User = require('../models/User');
 const geminiService = require('../services/geminiService');
@@ -42,15 +43,31 @@ exports.predict = async (req, res) => {
       daily_activity: parseFloat(daily_activity) || 60
     };
 
+    const isGuest = req.user && (req.user.isGuest || req.user.role === 'guest');
+
     // Create pending prediction record
-    const prediction = await Prediction.create({
-      userId: req.user._id,
-      input: mlInput,
-      status: 'pending',
-      checkType: req.body.checkType || 'Screening',
-      symptoms: req.body.symptoms || [],
-      date: new Date()
-    });
+    let prediction;
+    if (isGuest) {
+      prediction = {
+        _id: new mongoose.Types.ObjectId(),
+        userId: req.user._id || new mongoose.Types.ObjectId(),
+        input: mlInput,
+        status: 'pending',
+        checkType: req.body.checkType || 'Screening',
+        symptoms: req.body.symptoms || [],
+        date: new Date(),
+        save: async function() { return this; }
+      };
+    } else {
+      prediction = await Prediction.create({
+        userId: req.user._id,
+        input: mlInput,
+        status: 'pending',
+        checkType: req.body.checkType || 'Screening',
+        symptoms: req.body.symptoms || [],
+        date: new Date()
+      });
+    }
 
     try {
       // Call FastAPI prediction endpoint
@@ -104,7 +121,9 @@ exports.predict = async (req, res) => {
       prediction.overallRisk = overallRisk;
       prediction.recommendations = recommendations;
       prediction.status = 'completed';
-      await prediction.save();
+      if (!isGuest) {
+        await prediction.save();
+      }
 
       res.json({
         success: true,
@@ -115,7 +134,9 @@ exports.predict = async (req, res) => {
           overallRisk,
           recommendations,
           input: mlInput,
-          timestamp: predictRes.data.timestamp
+          timestamp: predictRes.data.timestamp,
+          isSaved: !isGuest,
+          saveMessage: isGuest ? "Sign in to save your wellness history." : undefined
         }
       });
 
@@ -143,7 +164,9 @@ exports.predict = async (req, res) => {
           prediction.recommendations = geminiAnalysis.recommendations;
           prediction.status = 'completed';
           prediction.aiGenerated = true;
-          await prediction.save();
+          if (!isGuest) {
+            await prediction.save();
+          }
 
           return res.json({
             success: true,
@@ -154,7 +177,9 @@ exports.predict = async (req, res) => {
               recommendations: prediction.recommendations,
               input: mlInput,
               aiGenerated: true,
-              message: 'Analyzed by VitalIQ AI (Gemini)'
+              message: 'Analyzed by VitalIQ AI (Gemini)',
+              isSaved: !isGuest,
+              saveMessage: isGuest ? "Sign in to save your wellness history." : undefined
             }
           });
         }
@@ -193,7 +218,9 @@ exports.predict = async (req, res) => {
       prediction.recommendations = generateMLRecommendations(fallbackResults, mlInput);
       prediction.aiGenerated = false;
       prediction.status = 'completed';
-      await prediction.save();
+      if (!isGuest) {
+        await prediction.save();
+      }
 
       res.json({
         success: true,
@@ -205,7 +232,9 @@ exports.predict = async (req, res) => {
           recommendations: prediction.recommendations,
           input: mlInput,
           fallback: true,
-          message: 'AI services unavailable — used rule-based fallback'
+          message: 'AI services unavailable — used rule-based fallback',
+          isSaved: !isGuest,
+          saveMessage: isGuest ? "Sign in to save your wellness history." : undefined
         }
       });
     }
@@ -220,6 +249,9 @@ exports.predict = async (req, res) => {
 // @route   GET /api/predict/:id
 exports.getPrediction = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid prediction ID' });
+    }
     const prediction = await Prediction.findOne({
       _id: req.params.id,
       userId: req.user._id
@@ -239,6 +271,14 @@ exports.getPrediction = async (req, res) => {
 // @route   GET /api/predict/history
 exports.getHistory = async (req, res) => {
   try {
+    const isGuest = req.user && (req.user.isGuest || req.user.role === 'guest');
+    if (isGuest) {
+      return res.json({
+        success: true,
+        data: [],
+        message: "Sign in to save and view your wellness history."
+      });
+    }
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;

@@ -1,7 +1,8 @@
 {
-  "name": "frontend",
+  "name": "vitaliq-health-frontend",
   "private": true,
   "version": "0.0.0",
+  "description": "VitalIQ Health frontend for the AI-Assisted Wellness Risk Screening Platform",
   "type": "module",
   "scripts": {
     "dev": "vite",

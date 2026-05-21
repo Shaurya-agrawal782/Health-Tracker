@@ -83,10 +83,10 @@ const EmergencyLocator = () => {
         </div>
         <div>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#991b1b', marginBottom: '4px' }}>
-            Emergency Medical Locator 🆘
+            Nearby Care Locator 🆘
           </h3>
           <p style={{ fontSize: '0.9rem', color: '#7f1d1d', opacity: 0.8, lineHeight: 1.4 }}>
-            Your VitalIQ risk level is currently elevated. We've prepared a list of nearby medical facilities for immediate assistance.
+            Your screening risk level is currently elevated. We've prepared nearby care options in case you want professional support.
           </p>
         </div>
       </div>

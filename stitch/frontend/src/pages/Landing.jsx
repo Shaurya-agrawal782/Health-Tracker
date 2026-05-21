@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { FiActivity, FiCpu, FiShield, FiTrendingUp, FiZap, FiArrowRight, FiCheck } from 'react-icons/fi';
 
 const Landing = () => {
+  const disclaimer = 'VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.';
+
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -37,7 +39,7 @@ const Landing = () => {
       }}>
         <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '36px', height: '36px', background: '#0d9488', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>V</div>
-          <span style={{ color: '#064e3b' }}>VitalIQ</span>
+          <span style={{ color: '#064e3b' }}>VitalIQ Health</span>
         </div>
         <div style={{ display: 'flex', gap: '40px', alignItems: 'center' }}>
           <Link to="/login" style={{ color: '#334155', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>Login</Link>
@@ -93,12 +95,12 @@ const Landing = () => {
           letterSpacing: '-2px',
           color: '#064e3b' /* Deep Green for Headlines */
         }}>
-          Your Health, <br />
+          Wellness Signals, <br />
           <span style={{ 
             background: 'linear-gradient(135deg, #0d9488 0%, #10b981 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent'
-          }}>Decoded by AI.</span>
+          }}>Screened with AI.</span>
         </h1>
 
         <p style={{
@@ -108,7 +110,7 @@ const Landing = () => {
           margin: '0 auto 48px auto',
           lineHeight: 1.6
         }}>
-          VitalIQ uses advanced Gemini AI to analyze your lifestyle, predict health risks, and provide actionable micro-hacks for a longer, healthier life.
+          VitalIQ Health uses AI assistance to review lifestyle signals, estimate wellness risks, and suggest practical next steps.
         </p>
 
         <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
@@ -122,7 +124,7 @@ const Landing = () => {
             fontWeight: 700,
             boxShadow: '0 10px 25px -5px rgba(13,148,136,0.3)'
           }}>
-            Launch VitalIQ Free
+            Start Screening Free
           </Link>
           <button style={{ 
             background: 'white',
@@ -137,6 +139,20 @@ const Landing = () => {
           </button>
         </div>
 
+        <p style={{
+          maxWidth: '760px',
+          margin: '22px auto 0',
+          padding: '14px 18px',
+          border: '1px solid #cbd5e1',
+          borderRadius: '12px',
+          background: '#f8fafc',
+          color: '#475569',
+          fontSize: '0.86rem',
+          lineHeight: 1.55
+        }}>
+          {disclaimer}
+        </p>
+
         {/* Feature Grid */}
         <div style={{ 
           display: 'grid', 
@@ -148,9 +164,9 @@ const Landing = () => {
             <div style={{ width: '50px', height: '50px', background: '#f0fdfa', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0d9488', marginBottom: '24px' }}>
               <FiCpu size={24} />
             </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '12px', color: '#064e3b' }}>Gemini Analysis</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '12px', color: '#064e3b' }}>Gemini-Assisted Insights</h3>
             <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: 1.6 }}>
-              Deep correlation analysis of sleep, stress, and activity using Google's most advanced LLM.
+              Wellness trend analysis of sleep, stress, and activity patterns using Gemini API support.
             </p>
           </div>
 
@@ -158,9 +174,9 @@ const Landing = () => {
             <div style={{ width: '50px', height: '50px', background: '#f0fdf4', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', marginBottom: '24px' }}>
               <FiTrendingUp size={24} />
             </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '12px', color: '#064e3b' }}>Predictive Risks</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '12px', color: '#064e3b' }}>Risk Screening</h3>
             <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: 1.6 }}>
-              Early detection of diabetes, hypertension, and burnout risks before they become critical.
+              Early wellness risk estimates for diabetes, hypertension, and burnout signals, with guidance for next steps.
             </p>
           </div>
 
@@ -170,7 +186,7 @@ const Landing = () => {
             </div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '12px', color: '#064e3b' }}>Wellness Map</h3>
             <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: 1.6 }}>
-              Real-time environmental monitoring to keep you safe from local health hazards.
+              Environmental wellness context to support healthier daily decisions.
             </p>
           </div>
         </div>
@@ -184,7 +200,10 @@ const Landing = () => {
         background: '#f8fafc'
       }}>
         <p style={{ fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '20px' }}>
-          Powered By Google Gemini & VitalIQ Engine
+          VitalIQ Health - AI-Assisted Wellness Risk Screening Platform
+        </p>
+        <p style={{ maxWidth: '820px', margin: '0 auto', fontSize: '0.86rem', color: '#64748b', lineHeight: 1.6, padding: '0 24px' }}>
+          {disclaimer}
         </p>
       </footer>
     </div>

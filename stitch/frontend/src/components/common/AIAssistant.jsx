@@ -4,13 +4,14 @@ import { healthAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
 const AIAssistant = () => {
+  const disclaimer = 'VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.';
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hi! I'm VitalIQ, your AI Health Coach. 🏥 How can I help you today? You can ask me about your latest health logs or for wellness tips!"
+      content: "Hi! I'm VitalIQ, your AI-assisted wellness guide. I can help explain lifestyle trends, wellness risk estimates, and healthier habit ideas."
     }
   ]);
   const [loading, setLoading] = useState(false);
@@ -38,7 +39,7 @@ const AIAssistant = () => {
       setMessages(prev => [...prev, response.data.data]);
     } catch (error) {
       console.error('Chat error:', error);
-      toast.error('Failed to get a response from VitalIQ. Try again later!');
+      toast.error('Failed to get a wellness response from VitalIQ. Try again later!');
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         content: "I'm having a bit of trouble connecting right now. Please try again in a moment! 🔄" 
@@ -133,7 +134,7 @@ const AIAssistant = () => {
             <FiCpu size={18} />
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>VitalIQ AI Coach</div>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>VitalIQ Wellness Coach</div>
             <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>{loading ? 'Typing...' : 'Online & Ready'}</div>
           </div>
         </div>
@@ -149,6 +150,17 @@ const AIAssistant = () => {
 
       {!isMinimized && (
         <>
+          <div style={{
+            padding: '12px 16px',
+            background: '#f8fafc',
+            borderBottom: '1px solid #e2e8f0',
+            color: '#475569',
+            fontSize: '0.74rem',
+            lineHeight: 1.45
+          }}>
+            {disclaimer}
+          </div>
+
           {/* Messages */}
           <div style={{
             flex: 1,
@@ -206,7 +218,7 @@ const AIAssistant = () => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask VitalIQ anything..."
+              placeholder="Ask about wellness trends..."
               style={{
                 flex: 1,
                 padding: '10px 16px',

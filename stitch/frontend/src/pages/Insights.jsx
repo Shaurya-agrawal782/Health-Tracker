@@ -6,6 +6,21 @@ import { Link } from 'react-router-dom';
 import HealthMap from '../components/dashboard/HealthMap';
 import EmergencyLocator from '../components/dashboard/EmergencyLocator';
 
+const firstProvided = (...values) => values.find(value => value !== undefined && value !== null && value !== '');
+
+const getEstimateLabel = (source, aiGenerated) => {
+  if (source === 'ml_model') return 'ML model estimate';
+  if (source === 'rule_based') return 'Rule-based wellness estimate';
+  if (source === 'ai_assisted' || aiGenerated) return 'AI-assisted wellness estimate';
+  return 'Wellness estimate';
+};
+
+const hasModelConfidence = (risk) => (
+  risk?.source === 'ml_model' &&
+  typeof risk.confidence === 'number' &&
+  Number.isFinite(risk.confidence)
+);
+
 const Insights = () => {
   const [risk, setRisk] = useState(null);
   const [latestPrediction, setLatestPrediction] = useState(null);
@@ -31,10 +46,15 @@ const Insights = () => {
         // Build the risk object: prefer prediction data over health-log risk
         if (pred && pred.overallRisk) {
           // Use prediction-based risk (from the screening form)
+          const source = pred.overallRisk.source || pred.source || (pred.aiGenerated ? 'ai_assisted' : null);
+          const confidence = typeof pred.overallRisk.confidence === 'number' ? pred.overallRisk.confidence : null;
           const predRisk = {
             level: pred.overallRisk.level,
             score: pred.overallRisk.score,
-            confidence: pred.overallRisk.confidence,
+            confidence,
+            confidenceLabel: pred.overallRisk.confidenceLabel || pred.confidenceLabel || getEstimateLabel(source, pred.aiGenerated),
+            source,
+            aiGenerated: pred.aiGenerated,
             explanation: pred.overallRisk.explanation || `Based on your screening on ${new Date(pred.date).toLocaleDateString()}`,
             factors: buildFactorsFromPrediction(pred),
             bmi: pred.input?.bmi || null,
@@ -73,21 +93,25 @@ const Insights = () => {
     const factors = [];
     const results = pred.results || {};
     const input = pred.input || {};
+    const sleepHours = firstProvided(input.sleepHours, input.sleep, 'N/A');
+    const workHours = firstProvided(input.workHours, input.work, 'N/A');
+    const screenHours = firstProvided(input.screenHours, input.screen);
+    const dailyActivityMinutes = firstProvided(input.dailyActivityMinutes, input.daily_activity, input.exerciseMinutes, input.activity);
 
     if (results.diabetes === 1) {
       factors.push({
-        factor: 'Diabetes Risk Detected',
+        factor: 'Elevated Glucose Risk Signal',
         impact: '+30%',
-        detail: `Glucose level ${input.glucose || 'N/A'} mg/dL exceeds safe threshold. BMI and family history may contribute.`,
+        detail: `Glucose level ${input.glucose || 'N/A'} mg/dL is above the reference range used for this lifestyle screening. BMI and family history may contribute.`,
         severity: 'high'
       });
     }
 
     if (results.bp === 1) {
       factors.push({
-        factor: 'High Blood Pressure Risk',
+        factor: 'Elevated Blood Pressure Signal',
         impact: '+25%',
-        detail: `Salt intake and stress levels indicate elevated cardiovascular risk.`,
+        detail: `Salt intake and stress levels are associated with elevated wellness risk in this screening.`,
         severity: 'high'
       });
     }
@@ -96,7 +120,7 @@ const Insights = () => {
       factors.push({
         factor: 'Elevated Stress',
         impact: '+20%',
-        detail: `Sleep ${input.sleep || 'N/A'}hrs and work ${input.work || 'N/A'}hrs/day pattern shows high stress load.`,
+        detail: `Sleep ${sleepHours}hrs and work ${workHours}hrs/day pattern shows high stress load.`,
         severity: 'medium'
       });
     }
@@ -113,28 +137,28 @@ const Insights = () => {
 
     if (results.bp === 0 && results.stress === 0) {
       factors.push({
-        factor: 'Cardiovascular Health Good',
+        factor: 'Blood Pressure and Stress Signals Look Lower',
         impact: '-10%',
-        detail: `No elevated blood pressure or chronic stress detected.`,
+        detail: `No elevated blood pressure or chronic stress signal was flagged in this screening.`,
         severity: 'low'
       });
     }
 
     // Add input-specific factors
-    if (input.screen && input.screen > 6) {
+    if (screenHours && screenHours > 6) {
       factors.push({
         factor: 'High Screen Time',
         impact: '+8%',
-        detail: `${input.screen}hrs of screen time daily — may cause eye strain and sleep disruption.`,
+        detail: `${screenHours}hrs of screen time daily — may cause eye strain and sleep disruption.`,
         severity: 'medium'
       });
     }
 
-    if (input.activity && input.activity < 100) {
+    if (dailyActivityMinutes && dailyActivityMinutes < 30) {
       factors.push({
         factor: 'Low Physical Activity',
         impact: '+12%',
-        detail: `Only ${input.activity} min/week of activity — WHO recommends 150+ min/week.`,
+        detail: `Only ${dailyActivityMinutes} min/day of activity — aim toward 30 minutes daily or 150 minutes weekly.`,
         severity: 'medium'
       });
     }
@@ -199,7 +223,7 @@ const Insights = () => {
           <span className="gradient-text">Health Insights</span> 🔍
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          AI-powered analysis based on your {latestPrediction ? 'latest screening' : 'health data'} — updates automatically with each check.
+          AI-assisted analysis based on your {latestPrediction ? 'latest screening' : 'health data'} — updates automatically with each check.
         </p>
       </div>
 
@@ -227,21 +251,27 @@ const Insights = () => {
           )}
 
           <div className="medical-card" style={{ padding: '20px', marginTop: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Prediction Confidence</span>
-              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)' }}>
-                {Math.round(risk.confidence * 100)}%
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                {hasModelConfidence(risk) ? 'Model Confidence' : 'Estimate Source'}
+              </span>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)', textAlign: 'right' }}>
+                {hasModelConfidence(risk)
+                  ? `${Math.round(Math.min(Math.max(risk.confidence, 0), 1) * 100)}%`
+                  : risk.confidenceLabel || getEstimateLabel(risk.source, risk.aiGenerated)}
               </span>
             </div>
-            <div style={{
-              height: '6px', borderRadius: '3px', background: '#e2e8f0', overflow: 'hidden'
-            }}>
+            {hasModelConfidence(risk) && (
               <div style={{
-                height: '100%', width: `${risk.confidence * 100}%`,
-                background: 'linear-gradient(90deg, var(--primary), var(--accent-emerald))',
-                borderRadius: '3px', transition: 'width 1s ease-out'
-              }} />
-            </div>
+                height: '6px', borderRadius: '3px', background: '#e2e8f0', overflow: 'hidden'
+              }}>
+                <div style={{
+                  height: '100%', width: `${Math.min(Math.max(risk.confidence, 0), 1) * 100}%`,
+                  background: 'linear-gradient(90deg, var(--primary), var(--accent-emerald))',
+                  borderRadius: '3px', transition: 'width 1s ease-out'
+                }} />
+              </div>
+            )}
           </div>
 
           {/* Last Updated Info */}
@@ -265,7 +295,7 @@ const Insights = () => {
           }}>
             <FiInfo color="var(--primary)" />
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              <strong style={{ color: 'var(--primary)' }}>Explainable AI:</strong> Each factor shows exactly how it contributes to your risk score.
+              <strong style={{ color: 'var(--primary)' }}>Explainable screening:</strong> Each factor shows how it may influence your wellness risk estimate.
             </span>
           </div>
 
@@ -317,7 +347,7 @@ const Insights = () => {
               Personalized Recommendations 💡
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-              Actionable steps based on your risk factors — updated after every screening.
+              Actionable steps based on your lifestyle risk signals — updated after every screening.
             </p>
           </div>
 

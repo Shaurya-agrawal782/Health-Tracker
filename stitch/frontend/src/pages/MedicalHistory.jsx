@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { predictAPI } from '../services/api';
-import { FiEye, FiDownload, FiSearch, FiCalendar } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
+import { FiEye, FiDownload, FiSearch, FiCalendar, FiLock, FiLogIn, FiUserPlus } from 'react-icons/fi';
 
 const typeColors = {
   'Screening': { bg: '#dbeafe', color: '#1d4ed8' },
@@ -14,12 +15,58 @@ const typeColors = {
 const filterTabs = ['All', 'Screening', 'Routine Check', 'Lab Result', 'Consultation', 'Follow-up'];
 
 const MedicalHistory = () => {
+  const { user } = useAuth();
+  const isGuest = user?.isGuest || user?.role === 'guest';
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
+
+  // Guest users see a locked state instead of history
+  if (isGuest) {
+    return (
+      <div className="page-enter" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div className="medical-card" style={{
+          maxWidth: '480px',
+          width: '100%',
+          textAlign: 'center',
+          padding: '48px 36px',
+          background: 'linear-gradient(135deg, #f0fdfa 0%, #f8fafc 100%)',
+          border: '1px solid #ccfbf1'
+        }}>
+          <div style={{
+            width: '72px',
+            height: '72px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, var(--primary), var(--accent-emerald))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px auto',
+            boxShadow: '0 8px 24px rgba(13, 148, 136, 0.25)'
+          }}>
+            <FiLock size={28} color="white" />
+          </div>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '8px', color: 'var(--text-primary)' }}>
+            Wellness History Locked
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.7, marginBottom: '28px' }}>
+            Sign in to save and view your personal wellness history. Guest predictions are temporary and will not appear here.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <Link to="/login" className="btn-primary" style={{ padding: '12px 28px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <FiLogIn size={16} /> Sign In
+            </Link>
+            <Link to="/register" className="btn-ghost" style={{ padding: '12px 28px', display: 'inline-flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-light)' }}>
+              <FiUserPlus size={16} /> Create Account
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const loadData = async () => {
     setLoading(true);
@@ -46,12 +93,12 @@ const MedicalHistory = () => {
 
   const getRiskSummary = (check) => {
     const { results } = check;
-    if (!results) return 'Awaiting analysis';
+    if (!results) return 'Awaiting screening';
     const risks = [];
-    if (results.diabetes === 1) risks.push('Diabetes risk detected');
-    if (results.bp === 1) risks.push('High BP risk detected');
-    if (results.stress === 1) risks.push('High stress detected');
-    return risks.length > 0 ? risks.join('. ') + '.' : 'All indicators within normal range.';
+    if (results.diabetes === 1) risks.push('Elevated glucose-related wellness signal');
+    if (results.bp === 1) risks.push('Elevated blood-pressure-related wellness signal');
+    if (results.stress === 1) risks.push('Elevated stress-related wellness signal');
+    return risks.length > 0 ? risks.join('. ') + '.' : 'No elevated wellness signals flagged.';
   };
 
   const filteredPredictions = predictions.filter(p => {
@@ -66,7 +113,7 @@ const MedicalHistory = () => {
       {/* Header */}
       <div style={{ marginBottom: '28px' }}>
         <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-          Medical History
+          Wellness History
         </h1>
       </div>
 
@@ -118,10 +165,10 @@ const MedicalHistory = () => {
           <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📋</div>
           <h3 style={{ fontWeight: 600, marginBottom: '8px' }}>No Records Found</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
-            {activeFilter !== 'All' ? `No ${activeFilter} records found.` : 'Start a health check to create your medical history.'}
+            {activeFilter !== 'All' ? `No ${activeFilter} records found.` : 'Start a wellness screening to create your history.'}
           </p>
           <Link to="/health-check" className="btn-primary" style={{ padding: '10px 24px' }}>
-            Start Health Check
+            Start Wellness Screening
           </Link>
         </div>
       ) : (

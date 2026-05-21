@@ -14,7 +14,7 @@ const DashboardLayout = () => {
     { path: '/health-check', label: 'Screening', icon: <FiPlusCircle size={18} /> },
     { path: '/insights', label: 'Insights', icon: <FiHeart size={18} /> },
     { path: '/meal-planner', label: 'Meal Plan', icon: <FiActivity size={18} /> },
-    { path: '/leaderboard', label: 'Leaderboard', icon: <FiBarChart2 size={18} /> },
+    { path: '/leaderboard', label: 'Wellness Streaks', icon: <FiBarChart2 size={18} /> },
     { path: '/history', label: 'History', icon: <FiClock size={18} /> },
   ];
 
@@ -56,7 +56,7 @@ const DashboardLayout = () => {
             color: 'white',
             boxShadow: '0 4px 12px rgba(13, 148, 136, 0.3)'
           }}>V</div>
-          <span className="gradient-text">VitalIQ</span>
+          <span className="gradient-text">VitalIQ Health</span>
         </Link>
 
         {/* Center: Premium Nav Pill */}

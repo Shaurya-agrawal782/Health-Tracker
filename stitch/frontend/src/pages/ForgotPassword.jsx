@@ -20,8 +20,8 @@ const ForgotPassword = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await forgotPassword(email);
-      toast.success('OTP sent to your email');
+      const data = await forgotPassword(email);
+      toast.success(data?.message || 'If this email exists, an OTP has been sent.');
       setStep(2);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send OTP');

@@ -51,7 +51,7 @@ const Register = () => {
         weight: parseFloat(formData.weight)
       };
       await register(payload);
-      toast.success('Welcome to VitalIQ! Account created.');
+      toast.success('Welcome to VitalIQ Health! Your wellness profile has been created.');
       navigate('/dashboard');
     } catch (err) {
       throw err;
@@ -109,10 +109,10 @@ const Register = () => {
             color: 'var(--text-primary)',
             marginBottom: '4px'
           }}>
-            Join VitalIQ
+            Join VitalIQ Health
           </h1>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            Create your health profile to get started
+            Create your wellness profile to get started
           </p>
         </div>
 

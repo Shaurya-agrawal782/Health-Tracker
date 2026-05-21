@@ -68,7 +68,7 @@ const HealthInput = () => {
           <span className="gradient-text">Log Daily Health Data</span> 📋
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Record your daily lifestyle data. This powers your risk predictions and recommendations.
+          Record your daily lifestyle data. This powers your wellness risk estimates and recommendations.
         </p>
       </div>
 

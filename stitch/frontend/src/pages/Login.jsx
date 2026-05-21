@@ -9,10 +9,12 @@ import OtpVerification from '../components/auth/OtpVerification';
 const Login = () => {
   const navigate = useNavigate();
   const { login, loginAsGuest, verifyOtp, completeLogin } = useAuth();
+  const isGoogleDemoEnabled = import.meta.env.DEV;
   
   const [showOtpScreen, setShowOtpScreen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
   const [tempAuthData, setTempAuthData] = useState(null);
   const [formData, setFormData] = useState({
     email: '',
@@ -37,18 +39,29 @@ const Login = () => {
   };
 
   const googleLogin = useGoogleLogin({
-    onSuccess: (response) => {
-      // Mock data for Google User (In a real app, this would be verified with Google)
+    onSuccess: () => {
+      if (!isGoogleDemoEnabled) {
+        toast.error('Google sign-in demo is available in local development only.');
+        return;
+      }
+
+      // Local development demo only. Production Google sign-in must use a
+      // backend endpoint that verifies Google-issued ID tokens.
       const mockGoogleData = {
-        user: { _id: '69efa1ed47cbbb02c162bb28', name: 'Google User', email: 'google-user@example.com' },
+        user: {
+          id: 'google-demo-user',
+          name: 'Google Demo User',
+          email: 'google-demo@vitaliq.local',
+          role: 'demo',
+          isMockGoogle: true
+        },
         token: 'mock_google_token'
       };
-      // Skip OTP for Google
       completeLogin(mockGoogleData.user, mockGoogleData.token);
-      toast.success('Google login successful! Welcome back.');
+      toast.success('Google sign-in demo started.');
       navigate('/dashboard');
     },
-    onError: () => toast.error('Google Login failed.')
+    onError: () => toast.error('Google sign-in demo failed.')
   });
 
   const handleOtpVerify = async (otpValue) => {
@@ -58,7 +71,7 @@ const Login = () => {
       // FINALLY log the user in with the REAL data from the backend
       if (data && data.token) {
         completeLogin(data.user, data.token);
-        toast.success('Welcome to VitalIQ!');
+        toast.success('Welcome to VitalIQ Health!');
         navigate('/dashboard');
       }
     } catch (err) {
@@ -66,10 +79,18 @@ const Login = () => {
     }
   };
 
-  const handleGuestLogin = () => {
-    loginAsGuest();
-    toast.success('Welcome! Exploring as a Guest.');
-    navigate('/dashboard');
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+
+    try {
+      await loginAsGuest();
+      toast.success('Welcome! Exploring as a Guest.');
+      navigate('/dashboard');
+    } catch (err) {
+      toast.error(err.message || 'Guest login is temporarily unavailable. Please try again.');
+    } finally {
+      setGuestLoading(false);
+    }
   };
 
   if (showOtpScreen) {
@@ -128,7 +149,7 @@ const Login = () => {
             Welcome Back
           </h1>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            Login to your VitalIQ health dashboard
+            Login to your VitalIQ Health wellness dashboard
           </p>
         </div>
 
@@ -136,7 +157,13 @@ const Login = () => {
         <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
           <button 
             type="button" 
-            onClick={() => googleLogin()}
+            onClick={() => {
+              if (!isGoogleDemoEnabled) {
+                toast.error('Google sign-in demo is available in local development only.');
+                return;
+              }
+              googleLogin();
+            }}
             style={{
               flex: 1,
               display: 'flex',
@@ -161,11 +188,12 @@ const Login = () => {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            Google
+            Google demo
           </button>
           <button 
             type="button" 
             onClick={handleGuestLogin}
+            disabled={guestLoading}
             style={{
               flex: 1,
               display: 'flex',
@@ -178,12 +206,18 @@ const Login = () => {
               background: '#f8fafc',
               fontSize: '0.85rem',
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: guestLoading ? 'not-allowed' : 'pointer',
               color: 'var(--primary)'
             }}
           >
-            <FiUserPlus />
-            Guest
+            {guestLoading ? (
+              <span className="spinner" style={{ width: '18px', height: '18px', borderWidth: '2px' }} />
+            ) : (
+              <>
+                <FiUserPlus />
+                Guest
+              </>
+            )}
           </button>
         </div>
 
@@ -268,7 +302,7 @@ const Login = () => {
           fontSize: '0.9rem',
           color: 'var(--text-secondary)'
         }}>
-          New to VitalIQ?{' '}
+          New to VitalIQ Health?{' '}
           <Link to="/register" style={{
             color: 'var(--primary)',
             fontWeight: 700,

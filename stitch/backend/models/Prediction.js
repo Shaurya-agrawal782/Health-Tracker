@@ -9,8 +9,23 @@ const predictionSchema = new mongoose.Schema({
   },
   input: {
     age: Number,
+    gender: String,
     bmi: Number,
+    bloodPressure: mongoose.Schema.Types.Mixed,
+    sleepHours: Number,
+    screenHours: Number,
+    workHours: Number,
+    dailyActivityMinutes: Number,
+    stressLevel: mongoose.Schema.Types.Mixed,
+    steps: Number,
+    waterIntake: Number,
+    smoking: Boolean,
+    alcohol: Boolean,
+    familyHistory: String,
+    symptoms: [String],
     glucose: Number,
+
+    // Legacy input names are kept so older prediction history remains readable.
     activity: Number,
     family: String,
     weight: Number,
@@ -50,7 +65,9 @@ const predictionSchema = new mongoose.Schema({
   overallRisk: {
     level: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Low' },
     score: { type: Number, default: 0 },
-    confidence: { type: Number, default: 0 },
+    confidence: { type: Number, default: null },
+    confidenceLabel: { type: String, default: '' },
+    source: { type: String, default: '' },
     explanation: { type: String, default: '' }
   },
   symptoms: [String],

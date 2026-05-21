@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const statusMessages = [
   'Preparing health data...',
   'Analyzing vitals...',
-  'Running diabetes prediction...',
+  'Screening diabetes risk signals...',
   'Checking blood pressure risk...',
   'Evaluating stress levels...',
   'Computing SHAP explanations...',

@@ -93,7 +93,7 @@ const generateRecommendations = (healthData, riskResult, user) => {
       title: 'Manage Your Stress',
       category: 'stress',
       priority: 'high',
-      reason: `Stress level ${healthData.stressLevel}/10 is dangerously high. Chronic stress weakens immunity and increases heart disease risk.`,
+      reason: `Stress level ${healthData.stressLevel}/10 is elevated and may affect day-to-day wellness, energy, and recovery.`,
       actions: [
         'Practice deep breathing exercises (4-7-8 technique)',
         'Try 10 minutes of guided meditation (Headspace, Calm)',
@@ -125,7 +125,7 @@ const generateRecommendations = (healthData, riskResult, user) => {
       title: 'Improve Your Diet',
       category: 'diet',
       priority: 'high',
-      reason: 'Junk food diets are linked to obesity, diabetes, and heart disease.',
+      reason: 'Frequent highly processed foods can be associated with higher lifestyle risk signals over time.',
       actions: [
         'Replace one junk meal with a home-cooked meal daily',
         'Add fruits and vegetables to every meal',
@@ -142,7 +142,7 @@ const generateRecommendations = (healthData, riskResult, user) => {
       title: 'Balance Your Non-Veg Diet',
       category: 'diet',
       priority: 'low',
-      reason: 'Non-vegetarian diets are fine but need balance for heart health.',
+      reason: 'Non-vegetarian diets can fit a wellness plan when balanced with fiber-rich foods and lean protein choices.',
       actions: [
         'Include fish (omega-3 rich) at least twice a week',
         'Limit red and processed meat',
@@ -158,7 +158,7 @@ const generateRecommendations = (healthData, riskResult, user) => {
       title: 'Drink More Water',
       category: 'diet',
       priority: healthData.waterIntake < 2 ? 'high' : 'medium',
-      reason: `Only ${healthData.waterIntake}L water today. Dehydration affects energy, focus, and organ function.`,
+      reason: `Only ${healthData.waterIntake}L water today. Low hydration can affect energy and focus.`,
       actions: [
         'Keep a water bottle at your desk and refill it',
         'Drink a glass of water before every meal',
@@ -172,12 +172,12 @@ const generateRecommendations = (healthData, riskResult, user) => {
   // ===== SMOKING =====
   if (healthData.smoking) {
     recommendations.push({
-      title: 'Quit Smoking',
+      title: 'Reduce Smoking Exposure',
       category: 'lifestyle',
       priority: 'critical',
-      reason: 'Smoking is the #1 preventable cause of death. It damages every organ in your body.',
+      reason: 'Smoking is associated with higher long-term wellness and cardiovascular risk signals.',
       actions: [
-        'Consult a doctor about nicotine replacement therapy',
+        'Ask a qualified healthcare professional about evidence-based quit-smoking support',
         'Identify your triggers and plan alternatives',
         'Try the "delay and distract" technique for cravings',
         'Join a quit-smoking support group',
@@ -193,7 +193,7 @@ const generateRecommendations = (healthData, riskResult, user) => {
       title: 'Reduce Alcohol Intake',
       category: 'lifestyle',
       priority: 'high',
-      reason: 'Regular alcohol consumption increases liver disease and cardiovascular risks.',
+      reason: 'Regular alcohol consumption can be associated with higher lifestyle risk signals.',
       actions: [
         'Set alcohol-free days (aim for 4+ per week)',
         'Switch to low-alcohol or non-alcoholic alternatives',
@@ -211,7 +211,7 @@ const generateRecommendations = (healthData, riskResult, user) => {
       title: 'Address Your Weight',
       category: 'diet',
       priority: 'high',
-      reason: `Your BMI is ${bmi.toFixed(1)} (Obese). This increases risk for diabetes, heart disease, and joint problems.`,
+      reason: `Your BMI is ${bmi.toFixed(1)} (Obese). This can be associated with higher lifestyle risk signals.`,
       actions: [
         'Consult a nutritionist for a personalized meal plan',
         'Aim for gradual weight loss: 0.5-1 kg per week',
