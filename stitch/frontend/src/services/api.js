@@ -36,15 +36,13 @@ API.interceptors.request.use((config) => {
 });
 
 // Response interceptor — handle auth errors
+// Dispatches a custom event instead of doing a hard redirect, so React Router
+// can handle navigation cleanly without a full page reload.
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Only redirect if we are NOT already on the login page
-    // This prevents clearing the error message during a failed login attempt
     if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
-      localStorage.removeItem('vitaliq_token');
-      localStorage.removeItem('vitaliq_user');
-      window.location.href = '/login';
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     }
     return Promise.reject(error);
   }
@@ -60,7 +58,8 @@ export const authAPI = {
   forgotPassword: (data) => API.post('/auth/forgot-password', data),
   resetPassword: (data) => API.post('/auth/reset-password', data),
   getLeaderboard: () => API.get('/auth/leaderboard'),
-  getProfile: () => API.get('/auth/profile')
+  getProfile: () => API.get('/auth/profile'),
+  updatePreferences: (data) => API.put('/auth/preferences', data)
 };
 
 // Health APIs (legacy daily tracking)
@@ -82,7 +81,8 @@ export const predictAPI = {
 
 // Recommendation APIs
 export const recommendationAPI = {
-  getAll: () => API.get('/recommendations')
+  getAll: () => API.get('/recommendations'),
+  getMealPlan: (data) => API.post('/recommendations/meal-plan', data)
 };
 
 export default API;

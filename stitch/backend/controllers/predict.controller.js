@@ -17,31 +17,123 @@ exports.predict = async (req, res) => {
       user = req.user;
     }
 
-    if (!user || !user.age) {
+    if (!user) {
       return res.status(404).json({ success: false, message: 'User not found or profile incomplete' });
     }
 
     const {
+      // Legacy compact field names (from old form)
       glucose, activity, family, salt,
-      activity_level, stress_level, sleep, screen, work, daily_activity
+      activity_level, stress_level, sleep, screen, work, daily_activity,
+      // New extended fields (from improved form)
+      age: bodyAge, gender: bodyGender, height: bodyHeight, weight: bodyWeight,
+      bloodPressure, familyHistory, smoking, alcohol,
+      sleepHours, screenHours, workHours, dailyActivityMinutes, stressLevel,
+      // New optional advanced metric fields
+      systolic, diastolic, existingConditions,
+      advancedMetricsProvided: rawAdvancedMetricsProvided,
     } = req.body;
 
-    // Build the ML input using user profile + form data
+    const advancedMetricsProvided = rawAdvancedMetricsProvided === true || rawAdvancedMetricsProvided === 'true';
+
+    // Resolve demographics — form values override profile for guest users
+    const resolvedAge    = bodyAge    ? parseFloat(bodyAge)    : user.age;
+    const resolvedWeight = bodyWeight ? parseFloat(bodyWeight) : user.weight;
+    const resolvedHeight = bodyHeight ? parseFloat(bodyHeight) : user.height;
+
+    if (!resolvedAge || !resolvedWeight || !resolvedHeight) {
+      return res.status(404).json({ success: false, message: 'User profile incomplete — age, weight, and height are required' });
+    }
+
+    const resolvedBmi = +(resolvedWeight / ((resolvedHeight / 100) ** 2)).toFixed(1);
+
+    // Resolve lifestyle fields — prefer new standard names, fall back to legacy compact names
+    const resolvedSleep        = parseFloat(sleepHours         ?? sleep)           || 7;
+    const resolvedScreen       = parseFloat(screenHours        ?? screen)          || 5;
+    const resolvedWork         = parseFloat(workHours          ?? work)            || 8;
+    const resolvedDailyActivity= parseFloat(dailyActivityMinutes ?? daily_activity) || 60;
+    const resolvedActivityLevel= stressLevel != null ? null : (activity_level || 'Moderate'); // placeholder, resolved below
+    const resolvedStressLevel  = stressLevel || stress_level || 'Medium';
+    const resolvedActivityLevelFinal = activity_level || 'Moderate';
+
+    // Optional advanced metric resolution:
+    // When advancedMetricsProvided is false (user skipped), keep null in DB but
+    // use safe defaults for the ML API call so it doesn't crash.
+    const resolvedGlucoseRaw  = advancedMetricsProvided && glucose != null ? parseFloat(glucose) : null;
+    const resolvedGlucoseML   = resolvedGlucoseRaw != null ? resolvedGlucoseRaw : 100; // safe ML default
+    const resolvedSystolic    = advancedMetricsProvided && systolic != null ? parseFloat(systolic) : null;
+    const resolvedDiastolic   = advancedMetricsProvided && diastolic != null ? parseFloat(diastolic) : null;
+    const resolvedActivity     = parseFloat(activity) || (resolvedDailyActivity * 7 / 6); // approx weekly from daily
+    const resolvedSalt         = parseFloat(salt) || 8;
+
+    // Blood pressure: store exact object if systolic+diastolic given, else category string, else null
+    let resolvedBloodPressureDB = null;
+    if (advancedMetricsProvided) {
+      if (resolvedSystolic && resolvedDiastolic) {
+        resolvedBloodPressureDB = { systolic: resolvedSystolic, diastolic: resolvedDiastolic };
+      } else if (bloodPressure && bloodPressure !== 'null') {
+        resolvedBloodPressureDB = bloodPressure;
+      }
+    }
+
+    // Family history: null when advanced metrics not provided
+    const resolvedFamily = advancedMetricsProvided ? (familyHistory || family || 'No') : (family || 'No');
+
+    // Smoking/alcohol: null when advanced metrics not provided
+    const resolvedSmoking = advancedMetricsProvided && smoking != null ? Boolean(smoking) : null;
+    const resolvedAlcohol = advancedMetricsProvided && alcohol  != null ? Boolean(alcohol)  : null;
+
+    // Build the ML input using resolved demographics + lifestyle data
+    // Null values are replaced with safe defaults so the FastAPI ML server won't crash.
     const mlInput = {
-      age: user.age,
-      bmi: +(user.weight / ((user.height / 100) ** 2)).toFixed(1),
-      glucose: parseFloat(glucose) || 100,
-      activity: parseFloat(activity) || 150,
-      family: family || 'No',
-      weight: user.weight,
-      salt: parseFloat(salt) || 8,
-      activity_level: activity_level || 'Moderate',
-      stress_level: stress_level || 'Medium',
-      sleep: parseFloat(sleep) || 7,
-      screen: parseFloat(screen) || 5,
-      work: parseFloat(work) || 8,
-      daily_activity: parseFloat(daily_activity) || 60
+      age:            resolvedAge,
+      bmi:            resolvedBmi,
+      glucose:        resolvedGlucoseML,
+      activity:       resolvedActivity,
+      family:         resolvedFamily,
+      weight:         resolvedWeight,
+      salt:           resolvedSalt,
+      activity_level: resolvedActivityLevelFinal,
+      stress_level:   resolvedStressLevel,
+      sleep:          resolvedSleep,
+      screen:         resolvedScreen,
+      work:           resolvedWork,
+      daily_activity: resolvedDailyActivity,
     };
+
+    // Build enriched input for the database — stores both new standard names and legacy names
+    // so results page and recommendation engine can read via either key name.
+    const dbInput = {
+      // Standard field names (used by results page + future schema)
+      age:                  resolvedAge,
+      bmi:                  resolvedBmi,
+      sleepHours:           resolvedSleep,
+      screenHours:          resolvedScreen,
+      workHours:            resolvedWork,
+      dailyActivityMinutes: resolvedDailyActivity,
+      stressLevel:          resolvedStressLevel,
+      familyHistory:        resolvedFamily,
+      glucose:              resolvedGlucoseRaw,    // null when not provided
+      bloodPressure:        resolvedBloodPressureDB,
+      systolic:             resolvedSystolic,       // null when not provided
+      diastolic:            resolvedDiastolic,      // null when not provided
+      smoking:              resolvedSmoking,
+      alcohol:              resolvedAlcohol,
+      existingConditions:   advancedMetricsProvided ? (existingConditions || null) : null,
+      advancedMetricsProvided,
+      weight:               resolvedWeight,
+      // Legacy compact field names (kept for backward compat + ML input readability)
+      activity:       resolvedActivity,
+      family:         resolvedFamily,
+      salt:           resolvedSalt,
+      activity_level: resolvedActivityLevelFinal,
+      stress_level:   resolvedStressLevel,
+      sleep:          resolvedSleep,
+      screen:         resolvedScreen,
+      work:           resolvedWork,
+      daily_activity: resolvedDailyActivity,
+    };
+
 
     const isGuest = req.user && (req.user.isGuest || req.user.role === 'guest');
 
@@ -51,7 +143,7 @@ exports.predict = async (req, res) => {
       prediction = {
         _id: new mongoose.Types.ObjectId(),
         userId: req.user._id || new mongoose.Types.ObjectId(),
-        input: mlInput,
+        input: dbInput,
         status: 'pending',
         checkType: req.body.checkType || 'Screening',
         symptoms: req.body.symptoms || [],
@@ -61,7 +153,7 @@ exports.predict = async (req, res) => {
     } else {
       prediction = await Prediction.create({
         userId: req.user._id,
-        input: mlInput,
+        input: dbInput,
         status: 'pending',
         checkType: req.body.checkType || 'Screening',
         symptoms: req.body.symptoms || [],

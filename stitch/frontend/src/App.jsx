@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -7,6 +8,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Onboarding from './pages/Onboarding';
 import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import HealthInput from './pages/HealthInput';
@@ -18,6 +20,8 @@ import Insights from './pages/Insights';
 import Recommendations from './pages/Recommendations';
 import MealPlanner from './pages/MealPlanner';
 import Leaderboard from './pages/Leaderboard';
+import Habits from './pages/Habits';
+import Privacy from './pages/Privacy';
 import NotFound from './pages/NotFound';
 
 // Layout
@@ -25,7 +29,8 @@ import DashboardLayout from './components/layout/DashboardLayout';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -41,7 +46,33 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Check if onboarding is needed
+  const isGuest = user?.isGuest || user?.role === 'guest';
+  const guestOnboarding = JSON.parse(localStorage.getItem('vitaliq_onboarding') || '{}');
+  
+  const onboardingCompleted = isGuest 
+    ? guestOnboarding.onboardingCompleted 
+    : user?.preferences?.onboardingCompleted;
+  
+  const onboardingSkipped = isGuest
+    ? guestOnboarding.onboardingSkipped
+    : user?.preferences?.onboardingSkipped;
+
+  const needsOnboarding = !onboardingCompleted && !onboardingSkipped;
+
+  if (needsOnboarding && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (!needsOnboarding && location.pathname === '/onboarding') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
 };
 
 // Public Route (redirect to dashboard if already authenticated)
@@ -65,10 +96,36 @@ const PublicRoute = ({ children }) => {
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
 };
 
+// Listen to the auth:unauthorized event from api.js and trigger client-side navigation
+const AuthEventListener = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      // Do not repeatedly dispatch or handle if already on login page
+      if (window.location.pathname.includes('/login')) {
+        return;
+      }
+
+      logout({ showExpiredMessage: true });
+      navigate('/login', { replace: true });
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, [navigate, logout]);
+
+  return null;
+};
+
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <AuthEventListener />
         <Toaster
           position="top-right"
           toastOptions={{
@@ -95,6 +152,9 @@ function App() {
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
 
+          {/* Protected Onboarding Route (No Sidebar/Header layout) */}
+          <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+
           {/* Protected Dashboard Routes */}
           <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -107,6 +167,8 @@ function App() {
             <Route path="/history" element={<MedicalHistory />} />
             <Route path="/insights" element={<Insights />} />
             <Route path="/recommendations" element={<Recommendations />} />
+            <Route path="/habits" element={<Habits />} />
+            <Route path="/privacy" element={<Privacy />} />
           </Route>
 
           {/* Catch-all */}

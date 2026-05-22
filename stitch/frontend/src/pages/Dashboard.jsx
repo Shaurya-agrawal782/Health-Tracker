@@ -43,6 +43,16 @@ const Dashboard = () => {
   const userHealthScore = summary?.activityScore || 0;
   const isNewUser = checks.length === 0 && !summary;
 
+  const isGuest = user?.isGuest || user?.role === 'guest';
+  const guestOnboarding = JSON.parse(localStorage.getItem('vitaliq_onboarding') || '{}');
+  const prefs = isGuest ? guestOnboarding : (user?.preferences || {});
+  
+  const onboardingCompleted = prefs.onboardingCompleted;
+  const isStudentLowBudget = prefs.userType === 'Student' && (prefs.budgetAmount || prefs.budgetPeriod);
+  
+  const firstName = user?.name?.split(' ')[0] || 'User';
+  const goalsStr = prefs.goals?.length > 0 ? prefs.goals.join(' & ') : 'General wellness';
+
   return (
     <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
@@ -59,8 +69,25 @@ const Dashboard = () => {
       }}>
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, marginBottom: '12px', letterSpacing: '-0.5px' }}>
-            Hello, {user?.name?.split(' ')[0]}! 👋
+            {onboardingCompleted 
+              ? `Welcome back, ${firstName}! Today's focus: ${goalsStr} 🎯`
+              : `Hello, ${firstName}! 👋`
+            }
           </h1>
+          {isStudentLowBudget && (
+            <div style={{
+              background: 'rgba(255,255,255,0.2)',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              display: 'inline-block',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              marginBottom: '12px',
+              backdropFilter: 'blur(4px)'
+            }}>
+              Budget-friendly wellness plan for your student routine
+            </div>
+          )}
           <p style={{ fontSize: '1.05rem', opacity: 0.9, maxWidth: '600px', lineHeight: 1.6 }}>
             {isNewUser ? (
               "Welcome to VitalIQ Health! Complete your first wellness screening to see your wellness score and start your journey."
@@ -85,6 +112,32 @@ const Dashboard = () => {
           </svg>
         </div>
       </div>
+
+      {/* Onboarding CTA */}
+      {!onboardingCompleted && (
+        <div className="animate-fade-in" style={{
+          background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+          border: '1px solid #7dd3fc',
+          padding: '24px',
+          borderRadius: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+        }}>
+          <div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0369a1', marginBottom: '8px' }}>
+              Personalize Your Plan
+            </h3>
+            <p style={{ color: '#0c4a6e', fontSize: '0.9rem', margin: 0, fontWeight: 500 }}>
+              Personalize your plan to get better meal and habit suggestions.
+            </p>
+          </div>
+          <Link to="/onboarding" className="btn-primary" style={{ background: '#0284c7', color: 'white', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            Get Started <FiArrowRight />
+          </Link>
+        </div>
+      )}
 
       {/* 📊 Feature Grid: No More Empty Space */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>

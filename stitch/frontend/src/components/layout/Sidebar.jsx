@@ -1,15 +1,20 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  FiGrid, FiPlusCircle, FiTrendingUp,
-  FiHeart, FiAward, FiChevronLeft, FiChevronRight
+  FiGrid, FiCheckCircle, FiShoppingBag, FiZap,
+  FiList, FiTrendingUp, FiAward, FiShield,
+  FiChevronLeft, FiChevronRight
 } from 'react-icons/fi';
 import { useState } from 'react';
 
 const navItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: FiGrid },
-  { path: '/health-input', label: 'Log Data', icon: FiPlusCircle },
-  { path: '/insights', label: 'Insights', icon: FiTrendingUp },
-  { path: '/recommendations', label: 'Recommendations', icon: FiHeart },
+  { path: '/dashboard',       label: 'Dashboard',        icon: FiGrid },
+  { path: '/health-check',    label: 'Wellness Check',   icon: FiCheckCircle },
+  { path: '/meal-planner',    label: 'Meal Planner',     icon: FiShoppingBag },
+  { path: '/recommendations', label: 'Daily Actions',    icon: FiZap },
+  { path: '/habits',          label: 'Habits',           icon: FiList },
+  { path: '/history',         label: 'Progress',         icon: FiTrendingUp },
+  { path: '/leaderboard',     label: 'Wellness Streaks', icon: FiAward },
+  { path: '/privacy',         label: 'Privacy',          icon: FiShield },
 ];
 
 const Sidebar = () => {
@@ -117,11 +122,11 @@ const Sidebar = () => {
             border: '1px solid var(--border-subtle)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <FiAward size={16} color="var(--accent-amber)" />
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-amber)' }}>ML-Ready</span>
+              <FiShield size={16} color="var(--accent-teal)" />
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-teal)' }}>Privacy-Safe</span>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              Architecture designed for seamless ML model integration
+              Your wellness data stays private. Streaks use anonymized display names only.
             </p>
           </div>
         )}

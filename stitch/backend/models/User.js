@@ -60,6 +60,23 @@ const userSchema = new mongoose.Schema({
   lastLoggedAt: {
     type: Date
   },
+  preferences: {
+    onboardingCompleted: { type: Boolean, default: false },
+    onboardingSkipped: { type: Boolean, default: false },
+    userType: { type: String },
+    ageGroup: { type: String },
+    goals: [{ type: String }],
+    foodPreference: { type: String },
+    budgetAmount: { type: Number },
+    budgetPeriod: { type: String },
+    mealsPerDay: { type: Number },
+    livingType: { type: String },
+    cookingAccess: { type: String },
+    cityOrRegion: { type: String },
+    sleepTarget: { type: String },
+    activityLevel: { type: String },
+    reminderPreference: { type: String }
+  },
   otp: {
     type: String
   },

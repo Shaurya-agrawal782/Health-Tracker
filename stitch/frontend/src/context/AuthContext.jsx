@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -75,11 +76,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = (options = {}) => {
     localStorage.removeItem('vitaliq_token');
     localStorage.removeItem('vitaliq_user');
     setToken(null);
     setUser(null);
+
+    if (options.showExpiredMessage) {
+      // Use a stable ID to prevent duplicate toasts when multiple 401 errors
+      // arrive in quick succession (e.g. parallel in-flight requests).
+      toast.error('Your session expired. Please sign in again.', {
+        id: 'session-expired',
+        duration: 4000,
+      });
+    }
   };
 
   const verifyOtp = async (email, otp) => {
@@ -101,6 +111,18 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const updatePreferencesState = (preferencesData) => {
+    const updatedUser = {
+      ...user,
+      preferences: {
+        ...(user?.preferences || {}),
+        ...preferencesData
+      }
+    };
+    localStorage.setItem('vitaliq_user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
+
   const isAuthenticated = !!token && !!user;
 
   return (
@@ -117,7 +139,8 @@ export const AuthProvider = ({ children }) => {
       completeLogin,
       sendRegisterOtp,
       forgotPassword,
-      resetPassword
+      resetPassword,
+      updatePreferencesState
     }}>
       {children}
     </AuthContext.Provider>

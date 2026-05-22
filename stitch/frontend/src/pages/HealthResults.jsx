@@ -21,6 +21,25 @@ const formatInputValue = (value, suffix = '') => {
   return `${provided}${suffix}`;
 };
 
+// Format blood pressure — handles string labels (Normal/Elevated/High) or numeric objects
+const formatBP = (bp) => {
+  if (bp === null || bp === undefined || bp === '') return 'Not provided';
+  if (typeof bp === 'string') return bp; // e.g. 'Normal', 'Elevated', 'High'
+  if (typeof bp === 'object' && bp.systolic && bp.diastolic) return `${bp.systolic}/${bp.diastolic} mmHg`;
+  return 'Not provided';
+};
+
+// Detect whether advanced health metrics were provided (explicit flag or non-default values)
+const hasAdvancedMetrics = (input) => {
+  if (!input) return false;
+  if (input.advancedMetricsProvided !== undefined) {
+    return input.advancedMetricsProvided === true || input.advancedMetricsProvided === 'true';
+  }
+  const bpProvided = input.bloodPressure != null && input.bloodPressure !== '';
+  const glucoseProvided = input.glucose != null && input.glucose !== 100; // 100 is the backend default
+  return bpProvided || glucoseProvided;
+};
+
 const getEstimateLabel = (source, aiGenerated) => {
   if (source === 'ml_model') return 'ML model estimate';
   if (source === 'rule_based') return 'Rule-based wellness estimate';
@@ -82,7 +101,7 @@ const HealthResults = () => {
   const estimateLabel = overallRisk?.confidenceLabel || prediction.confidenceLabel || getEstimateLabel(estimateSource, prediction.aiGenerated);
   const inputRows = [
     { label: 'Glucose', value: formatInputValue(input?.glucose, ' mg/dL') },
-    { label: 'Blood Pressure', value: formatInputValue(firstProvided(input?.bloodPressure, input?.blood_pressure, input?.bp)) },
+    { label: 'Blood Pressure', value: formatBP(firstProvided(input?.bloodPressure, input?.blood_pressure, input?.bp)) },
     { label: 'BMI', value: formatInputValue(input?.bmi) },
     { label: 'Sleep', value: formatInputValue(firstProvided(input?.sleepHours, input?.sleep), ' hrs') },
     { label: 'Screen Time', value: formatInputValue(firstProvided(input?.screenHours, input?.screen), ' hrs/day') },
@@ -94,7 +113,8 @@ const HealthResults = () => {
     { label: 'Smoking', value: formatInputValue(input?.smoking) },
     { label: 'Alcohol', value: formatInputValue(input?.alcohol) },
     { label: 'Family History', value: formatInputValue(firstProvided(input?.familyHistory, input?.family)) },
-    { label: 'Symptoms', value: formatInputValue(firstProvided(input?.symptoms, prediction.symptoms)) }
+    { label: 'Symptoms', value: formatInputValue(firstProvided(input?.symptoms, prediction.symptoms)) },
+    ...(input?.existingConditions ? [{ label: 'Existing Conditions', value: input.existingConditions }] : [])
   ];
 
   // Find primary condition
@@ -154,6 +174,31 @@ const HealthResults = () => {
           </div>
         </div>
       )}
+
+      {/* Lifestyle-only vs Advanced Metrics banner */}
+      {(() => {
+        const usedAdvanced = hasAdvancedMetrics(input);
+        return (
+          <div style={{
+            padding: '13px 18px',
+            marginBottom: '20px',
+            borderRadius: 'var(--radius-md)',
+            background: usedAdvanced ? '#f0f9ff' : '#f0fdf4',
+            border: `1px solid ${usedAdvanced ? '#bae6fd' : '#bbf7d0'}`,
+            display: 'flex', alignItems: 'center', gap: '10px',
+            fontSize: '0.85rem',
+            color: usedAdvanced ? '#0369a1' : '#166534',
+            lineHeight: 1.6,
+          }}>
+            <span style={{ fontSize: '1.1rem' }}>{usedAdvanced ? '📊' : '🌿'}</span>
+            <span>
+              {usedAdvanced
+                ? 'This wellness estimate includes the optional health metrics you provided.'
+                : 'This wellness estimate is based mainly on your lifestyle inputs. You can include health metrics like blood pressure or glucose in future screenings for a more detailed estimate.'}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Primary Screening Card */}
       <div className="teal-card animate-fade-in-up" style={{

@@ -25,6 +25,12 @@ const predictionSchema = new mongoose.Schema({
     symptoms: [String],
     glucose: Number,
 
+    // Optional advanced metrics (new fields added for beginner-friendly form)
+    systolic: Number,
+    diastolic: Number,
+    existingConditions: String,
+    advancedMetricsProvided: { type: Boolean, default: false },
+
     // Legacy input names are kept so older prediction history remains readable.
     activity: Number,
     family: String,

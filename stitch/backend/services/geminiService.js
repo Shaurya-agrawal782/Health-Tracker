@@ -176,6 +176,71 @@ class GeminiService {
       return generateOfflineCoachResponse(getLatestMessageContent(messages));
     }
   }
+
+  /**
+   * Generate a budget-based meal plan
+   */
+  async generateMealPlan(options) {
+    if (this.disabled || !this.genAI) return null;
+
+    try {
+      const model = this.getModel();
+      if (!model) return null;
+
+      const prompt = `
+        You are a nutrition assistant for VitalIQ Health. Provide a realistic 1-day wellness meal plan based on the following user details:
+        
+        - Budget: ${options.budgetAmount ? options.budgetAmount : 'Flexible'} (${options.budgetPeriod || 'Per day'})
+        - Budget Level: ${options.budgetLevel || 'Flexible'}
+        - Food Preference: ${options.foodPreference || 'Any'}
+        - User Type: ${options.userType || 'General'}
+        - Wellness Goal: ${options.wellnessGoal || 'Balanced diet'}
+        - Region: ${options.cityOrRegion || 'India'}
+        - Allergies/Restrictions: ${options.allergies || 'None'}
+        
+        Guidelines for Affordability (focus on local Indian context):
+        - If Low budget: use standard affordable Indian foods like poha, upma, dal, rice, roti, chana, sprouts, curd, peanuts, seasonal vegetables, bananas, and eggs (if non-veg/eggetarian).
+        - If Medium budget: can include paneer, fruits, oats, milk, chicken/eggs (if non-veg).
+        - If High budget: can include paneer/tofu, dry fruits, Greek yogurt, quinoa/oats, smoothies, chicken/fish (if non-veg), salads.
+        
+        Safety rules:
+        - DO NOT make medical treatment claims.
+        - Do not say you diagnose, treat, or cure diseases.
+        - Frame the suggestions as "general wellness meal ideas" or "budget-friendly suggestions".
+        - Recommend they "consult a nutritionist for medical diet plans".
+        
+        Return the result EXACTLY as a JSON object with this structure:
+        {
+          "title": "A short engaging title for the plan",
+          "breakfast": "Detailed breakfast suggestion",
+          "lunch": "Detailed lunch suggestion",
+          "eveningSnack": "Detailed snack suggestion",
+          "dinner": "Detailed dinner suggestion",
+          "approxDailyCost": "Approximate cost in INR for one day (e.g., '₹150-₹200/day')",
+          "budgetNote": "Brief explanation of how this fits their budget level",
+          "affordableSwaps": [
+            "Swap suggestion 1",
+            "Swap suggestion 2"
+          ],
+          "safetyNote": "VitalIQ Health provides general wellness meal ideas. This is not medical treatment. Consult a nutritionist or doctor for medical diet plans."
+        }
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      
+      throw new Error("Failed to parse AI response for meal plan");
+    } catch (error) {
+      this.handleGeminiError(error, 'meal plan generation');
+      return null;
+    }
+  }
 }
 
 function getConfiguredModelName() {

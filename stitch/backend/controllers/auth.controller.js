@@ -143,7 +143,8 @@ exports.register = [
           weight: user.weight,
           points: user.points,
           currentStreak: user.currentStreak,
-          longestStreak: user.longestStreak
+          longestStreak: user.longestStreak,
+          preferences: user.preferences
         }
       });
     } catch (error) {
@@ -221,7 +222,8 @@ exports.verifyOtp = async (req, res) => {
         weight: user.weight,
         points: user.points,
         currentStreak: user.currentStreak,
-        longestStreak: user.longestStreak
+        longestStreak: user.longestStreak,
+        preferences: user.preferences
       }
     });
   } catch (error) {
@@ -372,8 +374,39 @@ exports.getProfile = async (req, res) => {
         points: user.points,
         currentStreak: user.currentStreak,
         longestStreak: user.longestStreak,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        preferences: user.preferences
       }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Update user preferences (Onboarding)
+// @route   PUT /api/auth/preferences
+exports.updatePreferences = async (req, res) => {
+  try {
+    if (req.user?.isGuest || req.user?.isMockGoogle) {
+      return res.status(400).json({ success: false, message: 'Guests should save preferences locally' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.preferences = {
+      ...user.preferences,
+      ...req.body
+    };
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Preferences updated successfully',
+      preferences: user.preferences
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
