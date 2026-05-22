@@ -1,6 +1,6 @@
 import { Outlet, Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FiGrid, FiCheckCircle, FiShoppingBag, FiZap, FiList, FiTrendingUp, FiAward, FiShield, FiLogOut, FiUser } from 'react-icons/fi';
+import { FiGrid, FiCheckCircle, FiShoppingBag, FiZap, FiList, FiTrendingUp, FiAward, FiShield, FiLogOut, FiUser, FiCalendar } from 'react-icons/fi';
 import { useState } from 'react';
 import AIAssistant from '../common/AIAssistant';
 
@@ -12,8 +12,9 @@ const DashboardLayout = () => {
     { path: '/dashboard',       label: 'Dashboard',        icon: <FiGrid size={16} /> },
     { path: '/health-check',    label: 'Wellness Check',   icon: <FiCheckCircle size={16} /> },
     { path: '/meal-planner',    label: 'Meal Planner',     icon: <FiShoppingBag size={16} /> },
-    { path: '/recommendations', label: 'Daily Actions',    icon: <FiZap size={16} /> },
+    { path: '/daily-actions',   label: 'Daily Actions',    icon: <FiZap size={16} /> },
     { path: '/habits',          label: 'Habits',           icon: <FiList size={16} /> },
+    { path: '/weekly-checkin',  label: 'Weekly Check-in',  icon: <FiCalendar size={16} /> },
     { path: '/history',         label: 'Progress',         icon: <FiTrendingUp size={16} /> },
     { path: '/leaderboard',     label: 'Wellness Streaks', icon: <FiAward size={16} /> },
     { path: '/privacy',         label: 'Privacy',          icon: <FiShield size={16} /> },

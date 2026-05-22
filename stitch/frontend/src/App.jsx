@@ -18,9 +18,11 @@ import HealthResults from './pages/HealthResults';
 import MedicalHistory from './pages/MedicalHistory';
 import Insights from './pages/Insights';
 import Recommendations from './pages/Recommendations';
+import DailyActions from './pages/DailyActions';
 import MealPlanner from './pages/MealPlanner';
 import Leaderboard from './pages/Leaderboard';
 import Habits from './pages/Habits';
+import WeeklyCheckin from './pages/WeeklyCheckin';
 import Privacy from './pages/Privacy';
 import NotFound from './pages/NotFound';
 
@@ -166,8 +168,10 @@ function App() {
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/history" element={<MedicalHistory />} />
             <Route path="/insights" element={<Insights />} />
-            <Route path="/recommendations" element={<Recommendations />} />
+            <Route path="/daily-actions" element={<DailyActions />} />
+            <Route path="/recommendations" element={<Navigate to="/daily-actions" replace />} />
             <Route path="/habits" element={<Habits />} />
+            <Route path="/weekly-checkin" element={<WeeklyCheckin />} />
             <Route path="/privacy" element={<Privacy />} />
           </Route>
 

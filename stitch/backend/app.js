@@ -6,6 +6,7 @@ const authRoutes = require('./routes/auth.routes');
 const healthRoutes = require('./routes/health.routes');
 const recommendationRoutes = require('./routes/recommendation.routes');
 const predictRoutes = require('./routes/predict.routes');
+const weeklyCheckinRoutes = require('./routes/weeklyCheckin.routes');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -47,6 +48,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/predict', predictRoutes);
+app.use('/api/checkins/weekly', weeklyCheckinRoutes);
 
 // Health check
 app.get('/api/ping', (req, res) => {

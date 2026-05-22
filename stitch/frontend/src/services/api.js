@@ -85,4 +85,10 @@ export const recommendationAPI = {
   getMealPlan: (data) => API.post('/recommendations/meal-plan', data)
 };
 
+// Weekly Check-in APIs
+export const weeklyCheckinAPI = {
+  create: (data) => API.post('/checkins/weekly', data),
+  getAll: () => API.get('/checkins/weekly')
+};
+
 export default API;

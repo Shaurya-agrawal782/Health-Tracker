@@ -190,40 +190,68 @@ class GeminiService {
       const prompt = `
         You are a nutrition assistant for VitalIQ Health. Provide a realistic 1-day wellness meal plan based on the following user details:
         
-        - Budget: ${options.budgetAmount ? options.budgetAmount : 'Flexible'} (${options.budgetPeriod || 'Per day'})
+        - Budget Amount: ${options.budgetAmount ? '₹' + options.budgetAmount : 'Flexible'}
+        - Budget Period: ${options.budgetPeriod || 'Per day'}
+        - Approximate Daily Budget: ${options.approximateDailyBudget ? '₹' + options.approximateDailyBudget + '/day' : 'Flexible'}
         - Budget Level: ${options.budgetLevel || 'Flexible'}
-        - Food Preference: ${options.foodPreference || 'Any'}
-        - User Type: ${options.userType || 'General'}
+        - Food Preference: ${options.foodPreference || 'Vegetarian'}
+        - User Type: ${options.userType || 'General user'}
+        - Living Arrangement: ${options.livingType || 'General'}
+        - Cooking Access: ${options.cookingAccess || 'Basic cooking'}
         - Wellness Goal: ${options.wellnessGoal || 'Balanced diet'}
+        - Meals Per Day: ${options.mealsPerDay || 4}
         - Region: ${options.cityOrRegion || 'India'}
         - Allergies/Restrictions: ${options.allergies || 'None'}
         
-        Guidelines for Affordability (focus on local Indian context):
-        - If Low budget: use standard affordable Indian foods like poha, upma, dal, rice, roti, chana, sprouts, curd, peanuts, seasonal vegetables, bananas, and eggs (if non-veg/eggetarian).
-        - If Medium budget: can include paneer, fruits, oats, milk, chicken/eggs (if non-veg).
-        - If High budget: can include paneer/tofu, dry fruits, Greek yogurt, quinoa/oats, smoothies, chicken/fish (if non-veg), salads.
-        
-        Safety rules:
-        - DO NOT make medical treatment claims.
-        - Do not say you diagnose, treat, or cure diseases.
-        - Frame the suggestions as "general wellness meal ideas" or "budget-friendly suggestions".
-        - Recommend they "consult a nutritionist for medical diet plans".
+        Rules:
+        1. Respect food preference STRICTLY:
+           - "Vegetarian": No meat, fish, poultry, or eggs. Dairy is allowed.
+           - "Vegan": No meat, fish, poultry, eggs, dairy, honey, or any animal products.
+           - "Eggetarian": No meat, fish, or poultry. Eggs and dairy are allowed.
+           - "Non-vegetarian": Eggs, chicken, fish, dairy, etc. are allowed (subject to budget).
+        2. Keep the meals practical, Indian-user-friendly, and budget-aware.
+        3. If budget level is "Low budget", avoid expensive items like chia seeds, almond/soy milk, quinoa, oats (if expensive), paneer (use sparingly or replace with soybean chunks/dal), walnuts, or avocados. Suggest cheap high-protein swaps like peanuts, roasted chana, sattu, eggs, and local pulses/legumes.
+        4. If living arrangement is "Hostel" or "PG", or cooking access is "No kitchen" or "Mess/tiffin dependent", suggest mess/tiffin-friendly additions and practical hostel tips.
+        5. For "mealsPerDay":
+           - If 3 or 4: suggest "breakfast", "lunch", "snack", and "dinner". Set "extraMeal" to null.
+           - If 5: suggest "breakfast", "lunch", "snack", "dinner", and a valid "extraMeal" (e.g. light mid-morning or late-evening snack).
+        6. Do not make medical treatment, curing, or diagnostic claims. Use general wellness wording only.
         
         Return the result EXACTLY as a JSON object with this structure:
         {
-          "title": "A short engaging title for the plan",
-          "breakfast": "Detailed breakfast suggestion",
-          "lunch": "Detailed lunch suggestion",
-          "eveningSnack": "Detailed snack suggestion",
-          "dinner": "Detailed dinner suggestion",
-          "approxDailyCost": "Approximate cost in INR for one day (e.g., '₹150-₹200/day')",
-          "budgetNote": "Brief explanation of how this fits their budget level",
+          "budgetSummary": {
+            "budgetAmount": ${options.budgetAmount ? Number(options.budgetAmount) : null},
+            "budgetPeriod": "${options.budgetPeriod || 'Per day'}",
+            "approximateDailyBudget": ${options.approximateDailyBudget ? Number(options.approximateDailyBudget) : null},
+            "budgetLevel": "${options.budgetLevel || 'Flexible'}"
+          },
+          "mealPlan": {
+            "breakfast": "Detailed breakfast suggestion including approximate cost/preparation info",
+            "lunch": "Detailed lunch suggestion including approximate cost/preparation info",
+            "snack": "Detailed snack suggestion including approximate cost/preparation info",
+            "dinner": "Detailed dinner suggestion including approximate cost/preparation info",
+            "extraMeal": "Detailed extra meal suggestion if mealsPerDay is 5, else null"
+          },
+          "approximateDailyCost": "Approximate cost in INR for one day (e.g., '₹120-₹150/day')",
           "affordableSwaps": [
-            "Swap suggestion 1",
-            "Swap suggestion 2"
+            "Affordable swap suggestion 1",
+            "Affordable swap suggestion 2"
           ],
+          "groceryList": [
+            "Grocery item 1",
+            "Grocery item 2"
+          ],
+          "hostelTips": [
+            "Hostel/PG tip 1",
+            "Hostel/PG tip 2"
+          ],
+          "budgetNote": "A short note explaining how this matches their budget level and living constraints",
           "safetyNote": "VitalIQ Health provides general wellness meal ideas. This is not medical treatment. Consult a nutritionist or doctor for medical diet plans."
         }
+
+        Note: 
+        - "groceryList" should be a list of raw ingredients to buy. If cooking access is "No kitchen" or "Mess/tiffin dependent", return null or an empty array for "groceryList".
+        - "hostelTips" should be a list of practical tips for PG/Hostel living. If living arrangement is NOT Hostel or PG, return null or an empty array.
       `;
 
       const result = await model.generateContent(prompt);

@@ -1,135 +1,565 @@
-import { FiList, FiDroplet, FiMoon, FiActivity, FiZap } from 'react-icons/fi';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { 
+  FiCheckCircle, FiCheck, FiSquare, FiCheckSquare, 
+  FiAlertTriangle, FiZap, FiSmile, FiTrendingUp, FiAward, FiInfo, FiTrendingDown, FiArrowRight
+} from 'react-icons/fi';
+import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 
-const habitCards = [
-  { icon: FiDroplet, label: 'Hydration', target: '8 glasses / day', color: '#0ea5e9', bg: '#f0f9ff', sample: '0 / 8 logged' },
-  { icon: FiMoon,    label: 'Sleep',     target: '7–9 hours',        color: '#8b5cf6', bg: '#f5f3ff', sample: '0 hrs tracked' },
-  { icon: FiActivity,label: 'Movement',  target: '30 min activity',  color: '#10b981', bg: '#f0fdf4', sample: '0 min logged' },
-  { icon: FiZap,     label: 'Energy',    target: 'Low stress day',   color: '#f59e0b', bg: '#fffbeb', sample: 'Not rated' },
+// Default habits template
+const DEFAULT_HABITS = [
+  {
+    id: 'water',
+    name: 'Water Intake',
+    category: 'Hydration',
+    description: 'Drink water consistently throughout the day to support energy levels and focus.',
+    target: '6 glasses',
+    unit: 'glasses',
+    icon: '💧',
+    color: '#0284c7',
+    bg: '#e6f4fe'
+  },
+  {
+    id: 'sleep',
+    name: 'Sleep Consistency',
+    category: 'Sleep',
+    description: 'Aim for a consistent bedtime and rest duration to optimize overnight recovery.',
+    target: '7-9 hours', // Will be dynamic if prefs are available
+    unit: 'bedtime/rest',
+    icon: '🌙',
+    color: '#7c3aed',
+    bg: '#f3e8ff'
+  },
+  {
+    id: 'walk',
+    name: 'Movement & Walk',
+    category: 'Activity',
+    description: 'Take a short walk to keep active, lower blood sugar spikes, and clear your mind.',
+    target: '20 minutes',
+    unit: 'minutes',
+    icon: '🏃',
+    color: '#059669',
+    bg: '#ecfdf5'
+  },
+  {
+    id: 'mealPlan',
+    name: 'Meal Plan Consistency',
+    category: 'Food',
+    description: 'Follow one planned budget-friendly, healthy meal to maintain nutritional balance.',
+    target: '1 planned meal',
+    unit: 'meal',
+    icon: '🥗',
+    color: '#0ea5e9',
+    bg: '#f0f9ff'
+  },
+  {
+    id: 'screenBreak',
+    name: 'Eye & Screen Breaks',
+    category: 'Screen Balance',
+    description: 'Practice screen breaks like the 20-20-20 rule to lower fatigue.',
+    target: '3 breaks',
+    unit: 'breaks',
+    icon: '💻',
+    color: '#475569',
+    bg: '#f1f5f9'
+  },
+  {
+    id: 'stressReset',
+    name: 'Mindful Stress Reset',
+    category: 'Stress',
+    description: 'Perform a brief breathing reset or unplugged stretch to calm your nervous system.',
+    target: '5 minutes',
+    unit: 'minutes',
+    icon: '🧘',
+    color: '#d97706',
+    bg: '#fef3c7'
+  }
 ];
 
+const getTodayKey = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getLast7DaysKeys = () => {
+  const keys = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    keys.push(`${year}-${month}-${day}`);
+  }
+  return keys;
+};
+
 const Habits = () => {
+  const { user } = useAuth();
+  const [todayCompletions, setTodayCompletions] = useState({});
+  const [habitHistory, setHabitHistory] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  const isGuest = user?.isGuest || user?.role === 'guest';
+  const guestOnboarding = JSON.parse(localStorage.getItem('vitaliq_onboarding') || '{}');
+  const prefs = isGuest ? guestOnboarding : (user?.preferences || {});
+  const onboardingCompleted = prefs.onboardingCompleted;
+
+  const todayKey = getTodayKey();
+
+  useEffect(() => {
+    // Load local storage states
+    const todayData = JSON.parse(localStorage.getItem(`vitaliq_habits_${todayKey}`) || '{}');
+    const historyData = JSON.parse(localStorage.getItem('vitaliq_habit_history') || '{}');
+    
+    // Fallback sync: if todayData has entries not in history, write it to history
+    if (Object.keys(todayData).length > 0 && !historyData[todayKey]) {
+      historyData[todayKey] = todayData;
+      localStorage.setItem('vitaliq_habit_history', JSON.stringify(historyData));
+    }
+
+    setTodayCompletions(todayData);
+    setHabitHistory(historyData);
+    setLoading(false);
+  }, [todayKey]);
+
+  // Toggle habit check-in status
+  const handleToggleHabit = (habitId) => {
+    const nextState = !todayCompletions[habitId];
+    const updatedToday = { ...todayCompletions, [habitId]: nextState };
+    
+    // Save to daily key
+    localStorage.setItem(`vitaliq_habits_${todayKey}`, JSON.stringify(updatedToday));
+    
+    // Save to history key
+    const updatedHistory = { ...habitHistory, [todayKey]: updatedToday };
+    localStorage.setItem('vitaliq_habit_history', JSON.stringify(updatedHistory));
+    
+    setTodayCompletions(updatedToday);
+    setHabitHistory(updatedHistory);
+
+    if (nextState) {
+      toast.success('Habit check-in logged! Keep going! 🚀');
+    } else {
+      toast.success('Check-in undone.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
+
+  // Personalization settings
+  const highlightSleep = prefs.goals?.includes('Sleep better');
+  const highlightMealPlan = prefs.goals?.includes('Eat healthy within budget');
+  const highlightStress = prefs.goals?.includes('Reduce stress');
+  const highlightWalk = prefs.activityLevel?.includes('Mostly sitting') || prefs.activityLevel?.includes('Sedentary');
+
+  // Streak calculations
+  const calculateStreak = (habitId) => {
+    let streak = 0;
+    let d = new Date();
+    
+    const formatDateStr = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    let checkStr = formatDateStr(d);
+    // If completed today
+    if (habitHistory[checkStr]?.[habitId] === true) {
+      streak = 1;
+      while (true) {
+        d.setDate(d.getDate() - 1);
+        checkStr = formatDateStr(d);
+        if (habitHistory[checkStr]?.[habitId] === true) {
+          streak++;
+        } else {
+          break;
+        }
+      }
+    } else {
+      // Check if completed yesterday
+      d.setDate(d.getDate() - 1);
+      checkStr = formatDateStr(d);
+      if (habitHistory[checkStr]?.[habitId] === true) {
+        streak = 1;
+        while (true) {
+          d.setDate(d.getDate() - 1);
+          checkStr = formatDateStr(d);
+          if (habitHistory[checkStr]?.[habitId] === true) {
+            streak++;
+          } else {
+            break;
+          }
+        }
+      } else {
+        streak = 0;
+      }
+    }
+    return streak;
+  };
+
+  // Weekly completion counts per habit
+  const last7Days = getLast7DaysKeys();
+  const getWeeklyCount = (habitId) => {
+    let count = 0;
+    last7Days.forEach(dateKey => {
+      if (habitHistory[dateKey]?.[habitId] === true) {
+        count++;
+      }
+    });
+    return count;
+  };
+
+  // Weekly stats calculations
+  let totalCompletionsThisWeek = 0;
+  const completionsPerHabit = {
+    water: 0,
+    sleep: 0,
+    walk: 0,
+    mealPlan: 0,
+    screenBreak: 0,
+    stressReset: 0
+  };
+
+  last7Days.forEach(dateKey => {
+    const dayData = habitHistory[dateKey] || {};
+    Object.keys(dayData).forEach(hid => {
+      if (dayData[hid] === true && completionsPerHabit[hid] !== undefined) {
+        totalCompletionsThisWeek++;
+        completionsPerHabit[hid]++;
+      }
+    });
+  });
+
+  const totalPossibleThisWeek = 6 * 7; // 6 habits * 7 days
+  const hasAnyHistory = Object.keys(habitHistory).some(dateKey => {
+    const dayData = habitHistory[dateKey] || {};
+    return Object.values(dayData).some(Boolean);
+  });
+
+  // Calculate best habit
+  let bestHabitId = 'water';
+  let maxCompletions = -1;
+  Object.keys(completionsPerHabit).forEach(hid => {
+    if (completionsPerHabit[hid] > maxCompletions) {
+      maxCompletions = completionsPerHabit[hid];
+      bestHabitId = hid;
+    }
+  });
+
+  // Calculate needs attention
+  let needsAttentionId = 'sleep';
+  let minCompletions = 999;
+  Object.keys(completionsPerHabit).forEach(hid => {
+    if (completionsPerHabit[hid] < minCompletions) {
+      minCompletions = completionsPerHabit[hid];
+      needsAttentionId = hid;
+    }
+  });
+
+  const habitLabelMap = {
+    water: 'Water Intake',
+    sleep: 'Sleep Consistency',
+    walk: 'Movement & Walk',
+    mealPlan: 'Meal Plan',
+    screenBreak: 'Screen Breaks',
+    stressReset: 'Stress Reset'
+  };
+
+  const bestHabitName = maxCompletions > 0 ? habitLabelMap[bestHabitId] : 'None yet';
+  const needsAttentionName = minCompletions < 7 ? habitLabelMap[needsAttentionId] : 'None! Perfect week!';
+
+  // Render habits list
+  const personalizedHabits = DEFAULT_HABITS.map(h => {
+    let highlighted = false;
+    let customTarget = h.target;
+
+    if (h.id === 'sleep') {
+      highlighted = highlightSleep;
+      if (prefs.sleepTarget) {
+        customTarget = prefs.sleepTarget;
+      }
+    } else if (h.id === 'mealPlan') {
+      highlighted = highlightMealPlan;
+    } else if (h.id === 'stressReset') {
+      highlighted = highlightStress;
+    } else if (h.id === 'walk') {
+      highlighted = highlightWalk;
+    }
+
+    const completed = todayCompletions[h.id] === true;
+    const streak = calculateStreak(h.id);
+    const weeklyCount = getWeeklyCount(h.id);
+
+    return {
+      ...h,
+      target: customTarget,
+      highlighted,
+      completed,
+      streak,
+      weeklyCount
+    };
+  });
+
+  // Today completed count
+  const todayCompletedCount = Object.values(todayCompletions).filter(Boolean).length;
+
   return (
-    <div className="page-enter">
-      {/* Page Header */}
-      <div style={{ marginBottom: '28px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-          <div style={{
-            width: '44px', height: '44px', borderRadius: '14px',
-            background: 'linear-gradient(135deg, #0d9488, #10b981)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 14px rgba(13,148,136,0.25)'
-          }}>
-            <FiList size={22} color="white" />
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '2px' }}>
-              <span className="gradient-text">Habit Tracking</span> ✅
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
-              Build daily wellness habits that stick — sleep, hydration, movement, and more.
-            </p>
-          </div>
-        </div>
+    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '900px', margin: '0 auto', paddingBottom: '40px' }}>
+      
+      {/* Header */}
+      <div>
+        <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span className="gradient-text">Habit Tracker</span> <FiCheckCircle color="var(--primary)" />
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '4px' }}>
+          Track small daily habits that improve your routine over time.
+        </p>
       </div>
 
-      {/* Coming Soon Banner */}
-      <div style={{
-        padding: '24px 28px',
-        marginBottom: '36px',
-        background: 'linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%)',
-        border: '1.5px dashed #6ee7b7',
-        borderRadius: '20px',
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '16px'
-      }}>
-        <span style={{ fontSize: '2.4rem', lineHeight: 1, flexShrink: 0 }}>🚀</span>
-        <div>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#065f46', marginBottom: '6px' }}>
-            Habit Tracking — Coming Soon
-          </h2>
-          <p style={{ color: '#047857', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '12px' }}>
-            Full daily habit tracker is on its way! You'll be able to check off water intake, sleep goals, movement minutes, and custom wellness habits — right from your daily routine.
-          </p>
-          <p style={{ color: '#065f46', fontSize: '0.85rem', fontWeight: 600 }}>
-            In the meantime, start logging your daily wellness data to build consistency and earn Wellness Streaks. 💚
-          </p>
-          <div style={{ marginTop: '16px' }}>
-            <Link
-              to="/health-check"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                padding: '10px 22px', borderRadius: '12px',
-                background: '#0d9488', color: 'white',
-                textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem',
-                boxShadow: '0 4px 12px rgba(13,148,136,0.2)',
-                transition: 'transform 0.15s ease'
-              }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              <FiZap size={16} /> Start Wellness Check
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Placeholder Habit Cards */}
-      <div style={{ marginBottom: '20px' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Preview: Daily Habit Modules
-        </h3>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '18px'
-        }}>
-          {habitCards.map(({ icon: Icon, label, target, color, bg, sample }) => (
-            <div key={label} className="medical-card" style={{
-              padding: '24px',
-              opacity: 0.7,
-              position: 'relative',
-              overflow: 'hidden'
+      {/* Role-based Helper Banner */}
+      {onboardingCompleted && (
+        <>
+          {prefs.userType === 'Student' && (
+            <div style={{
+              background: '#f0fdfa', border: '1px solid #ccfbf1', borderRadius: '16px', padding: '16px 20px',
+              color: '#0f766e', fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px'
             }}>
-              {/* Coming Soon overlay badge */}
-              <div style={{
-                position: 'absolute', top: '12px', right: '12px',
-                fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
-                padding: '3px 9px', borderRadius: '999px',
-                background: '#f1f5f9', color: '#94a3b8', letterSpacing: '0.5px'
-              }}>
-                Soon
+              <FiZap /> Small habits work best when they fit your class and study routine.
+            </div>
+          )}
+          {prefs.userType === 'Working Professional' && (
+            <div style={{
+              background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: '16px', padding: '16px 20px',
+              color: '#1d4ed8', fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px'
+            }}>
+              <FiZap /> Use short breaks to stay consistent during work hours.
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Guest Progress Notice */}
+      {isGuest && (
+        <div style={{
+          background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '16px', padding: '14px 18px',
+          color: '#b45309', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px'
+        }}>
+          <FiInfo size={16} /> Guest habit progress is saved on this device only. Consider creating an account to protect your streak history.
+        </div>
+      )}
+
+      {/* Weekly Overview Section */}
+      <div className="medical-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+          Weekly Overview
+        </h2>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+          {/* Progress Stat */}
+          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Weekly completions</span>
+            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', margin: '8px 0' }}>
+              {totalCompletionsThisWeek} of {totalPossibleThisWeek} logs
+            </div>
+            {/* Progress bar */}
+            <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ 
+                width: `${(totalCompletionsThisWeek / totalPossibleThisWeek) * 100}%`, 
+                height: '100%', 
+                background: 'var(--primary)',
+                transition: 'width 0.4s ease'
+              }} />
+            </div>
+          </div>
+
+          {/* Best Habit Stat */}
+          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d', flexShrink: 0 }}>
+              <FiTrendingUp size={20} />
+            </div>
+            <div>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Best Habit</span>
+              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+                {bestHabitName}
+              </div>
+              <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>
+                {maxCompletions > 0 ? `${maxCompletions} completions` : 'No completions yet'}
+              </span>
+            </div>
+          </div>
+
+          {/* Attention Habit Stat */}
+          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b91c1c', flexShrink: 0 }}>
+              <FiTrendingDown size={20} />
+            </div>
+            <div>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Needs Attention</span>
+              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+                {needsAttentionName}
+              </div>
+              <span style={{ fontSize: '0.72rem', color: '#b91c1c', fontWeight: 600 }}>
+                {minCompletions < 7 && maxCompletions > 0 ? `${minCompletions} completions` : 'Start check-ins today'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Empty History Message */}
+        {!hasAnyHistory && (
+          <div style={{ 
+            background: 'linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%)', border: '1px dashed #6ee7b7', 
+            borderRadius: '16px', padding: '16px', textAlign: 'center', color: '#065f46', fontSize: '0.9rem', fontWeight: 700 
+          }}>
+            Start with one habit today. Small wins build consistency. ✨
+          </div>
+        )}
+      </div>
+
+      {/* Habits Checklist */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+        {personalizedHabits.map((habit) => {
+          return (
+            <div 
+              key={habit.id} 
+              className="medical-card animate-fade-in-up"
+              style={{
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                border: habit.highlighted ? `2px solid ${habit.color}` : '1.5px solid var(--border-light)',
+                background: habit.completed ? 'var(--primary-50)' : 'white',
+                position: 'relative',
+                transition: 'all 0.2s ease-in-out'
+              }}
+            >
+              {/* Highlight Badge */}
+              {habit.highlighted && (
+                <span style={{
+                  position: 'absolute', top: '12px', right: '12px',
+                  background: habit.color, color: 'white', fontSize: '0.65rem',
+                  fontWeight: 800, textTransform: 'uppercase', padding: '3px 9px', borderRadius: 'var(--radius-full)'
+                }}>
+                  Focused Goal
+                </span>
+              )}
+
+              <div>
+                {/* Header Icon + Name */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{
+                    width: '44px', height: '44px', borderRadius: '12px',
+                    background: habit.bg, display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', fontSize: '1.4rem'
+                  }}>
+                    {habit.icon}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                      {habit.name}
+                    </h3>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700 }}>
+                      Category: {habit.category}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 16px 0', minHeight: '48px' }}>
+                  {habit.description}
+                </p>
+
+                {/* Target & Units */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '12px' }}>
+                  <span>Target: {habit.target}</span>
+                  <span style={{ color: habit.color, background: habit.bg, padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem' }}>
+                    {habit.unit}
+                  </span>
+                </div>
               </div>
 
-              <div style={{
-                width: '44px', height: '44px', borderRadius: '12px',
-                background: bg, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', marginBottom: '16px'
-              }}>
-                <Icon size={22} color={color} />
+              {/* Progress & Interaction Footer */}
+              <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '16px', marginTop: '12px' }}>
+                
+                {/* Streak and Weekly indicators */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '14px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <FiAward size={14} color="#d97706" /> {habit.streak}-day streak
+                  </span>
+                  <span>
+                    Weekly: {habit.weeklyCount}/7 days
+                  </span>
+                </div>
+
+                {/* Completion Checkbox/Button */}
+                <button
+                  onClick={() => handleToggleHabit(habit.id)}
+                  className={habit.completed ? 'btn-ghost' : 'btn-primary'}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    borderColor: habit.completed ? 'var(--border-light)' : 'transparent',
+                    background: habit.completed ? 'transparent' : `linear-gradient(135deg, ${habit.color} 0%, #0d9488 100%)`,
+                    color: habit.completed ? 'var(--text-secondary)' : 'white'
+                  }}
+                >
+                  {habit.completed ? (
+                    <>
+                      <FiCheckSquare size={16} /> Undo Check-in
+                    </>
+                  ) : (
+                    <>
+                      <FiCheck size={16} /> Mark Completed
+                    </>
+                  )}
+                </button>
+
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '4px' }}>{label}</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                Target: {target}
-              </p>
-              <div style={{
-                height: '8px', borderRadius: '999px',
-                background: '#e2e8f0', overflow: 'hidden'
-              }}>
-                <div style={{
-                  height: '100%', width: '0%',
-                  background: color, borderRadius: '999px',
-                  transition: 'width 0.6s ease'
-                }} />
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-                {sample}
-              </p>
             </div>
-          ))}
+          );
+        })}
+      </div>
+
+      {/* Safety Disclaimer */}
+      <div style={{
+        marginTop: '20px', 
+        padding: '16px 20px', 
+        borderRadius: 'var(--radius-lg)', 
+        background: '#f8fafc', 
+        border: '1px solid #e2e8f0', 
+        fontSize: '0.8rem', 
+        color: 'var(--text-muted)', 
+        lineHeight: 1.6
+      }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+          <FiAlertTriangle size={16} color="var(--accent-teal)" style={{ flexShrink: 0, marginTop: '2px' }} />
+          <span>
+            <strong>Wellness Habits Support:</strong> VitalIQ Health provides lifestyle habit tracking to assist with general consistency and routine support. This system does not deliver diagnoses, treatments, cures, or guaranteed disease prevention. Always seek advice of a healthcare provider for any medical concerns.
+          </span>
         </div>
       </div>
+
     </div>
   );
 };

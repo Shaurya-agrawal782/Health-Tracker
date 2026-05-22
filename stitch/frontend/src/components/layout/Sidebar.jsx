@@ -10,7 +10,7 @@ const navItems = [
   { path: '/dashboard',       label: 'Dashboard',        icon: FiGrid },
   { path: '/health-check',    label: 'Wellness Check',   icon: FiCheckCircle },
   { path: '/meal-planner',    label: 'Meal Planner',     icon: FiShoppingBag },
-  { path: '/recommendations', label: 'Daily Actions',    icon: FiZap },
+  { path: '/daily-actions', label: 'Daily Actions',    icon: FiZap },
   { path: '/habits',          label: 'Habits',           icon: FiList },
   { path: '/history',         label: 'Progress',         icon: FiTrendingUp },
   { path: '/leaderboard',     label: 'Wellness Streaks', icon: FiAward },

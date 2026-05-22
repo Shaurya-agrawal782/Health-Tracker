@@ -139,21 +139,6 @@ exports.getRecommendations = async (req, res) => {
       success: true,
       data: recommendations,
       totalRecommendations: recommendations.length,
-            'Get personalized recommendations based on your data'
-          ],
-          icon: '📊'
-        }]
-      });
-    }
-
-    // Sort by priority
-    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-    recommendations.sort((a, b) => (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3));
-
-    res.json({
-      success: true,
-      data: recommendations,
-      totalRecommendations: recommendations.length,
       sources: {
         healthLog: !!latest,
         screening: !!latestPrediction
@@ -169,20 +154,56 @@ exports.getRecommendations = async (req, res) => {
 exports.getMealPlan = async (req, res) => {
   try {
     const {
+      budgetAmount: rawBudgetAmount,
+      budgetPeriod = 'Per day',
+      budgetLevel = 'Custom',
+      foodPreference = 'Vegetarian',
+      userType = 'General user',
+      livingType = 'General',
+      cookingAccess = 'Basic cooking',
+      wellnessGoal = 'Balanced diet',
+      mealsPerDay: rawMealsPerDay,
+      cityOrRegion = '',
+      allergies = ''
+    } = req.body;
+
+    const mealsPerDay = parseInt(rawMealsPerDay) || 4;
+
+    // Infer budgetAmount if missing
+    let budgetAmount = rawBudgetAmount != null && rawBudgetAmount !== '' ? parseFloat(rawBudgetAmount) : null;
+    if (budgetAmount === null || isNaN(budgetAmount)) {
+      if (budgetLevel === 'Low budget' || budgetLevel === 'Low') {
+        budgetAmount = 140;
+      } else if (budgetLevel === 'Medium budget' || budgetLevel === 'Medium') {
+        budgetAmount = 240;
+      } else if (budgetLevel === 'High budget' || budgetLevel === 'High') {
+        budgetAmount = 350;
+      } else {
+        budgetAmount = 200;
+      }
+    }
+
+    // Convert weekly/monthly budget to daily budget
+    let approximateDailyBudget = budgetAmount;
+    if (budgetPeriod === 'Per week') {
+      approximateDailyBudget = +(budgetAmount / 7).toFixed(1);
+    } else if (budgetPeriod === 'Per month') {
+      approximateDailyBudget = +(budgetAmount / 30).toFixed(1);
+    }
+
+    const options = {
       budgetAmount,
       budgetPeriod,
       budgetLevel,
-      userType,
+      approximateDailyBudget,
       foodPreference,
+      userType,
+      livingType,
+      cookingAccess,
       wellnessGoal,
+      mealsPerDay,
       cityOrRegion,
-      allergies,
-      mealsPerDay
-    } = req.body;
-
-    const options = {
-      budgetAmount, budgetPeriod, budgetLevel, userType, foodPreference,
-      wellnessGoal, cityOrRegion, allergies, mealsPerDay
+      allergies
     };
 
     // Attempt AI Generation
@@ -193,7 +214,7 @@ exports.getMealPlan = async (req, res) => {
     }
 
     // Fallback if Gemini fails or is disabled
-    const fallbackPlan = getFallbackMealPlan(budgetLevel, foodPreference);
+    const fallbackPlan = getFallbackMealPlan(budgetLevel, foodPreference, options);
     res.json({ success: true, data: fallbackPlan });
 
   } catch (error) {
@@ -204,14 +225,16 @@ exports.getMealPlan = async (req, res) => {
 /**
  * Fallback meal plan generator based on budget and preference
  */
-function getFallbackMealPlan(budgetLevel, foodPreference) {
+function getFallbackMealPlan(budgetLevel, foodPreference, options = {}) {
   const isVegan = foodPreference === 'Vegan';
   const isNonVeg = foodPreference === 'Non-vegetarian';
   const isEgg = foodPreference === 'Eggetarian';
 
-  let breakfast, lunch, snack, dinner, cost;
+  let breakfast, lunch, snack, dinner, cost, extraMeal = null;
 
-  if (budgetLevel === 'Low budget' || budgetLevel === 'Low') {
+  const dailyBudget = options.approximateDailyBudget || 200;
+
+  if (budgetLevel === 'Low budget' || budgetLevel === 'Low' || dailyBudget <= 180) {
     cost = '₹120–₹180/day';
     breakfast = isVegan ? 'Poha/upma with peanuts and banana' : 
                 (isNonVeg || isEgg) ? 'Poha/upma with a boiled egg and banana' : 
@@ -221,7 +244,10 @@ function getFallbackMealPlan(budgetLevel, foodPreference) {
     dinner = isVegan ? 'Roti + dal + mixed vegetable sabzi' : 
              (isNonVeg) ? 'Roti + dal + egg bhurji' :
              'Roti + dal + curd';
-  } else if (budgetLevel === 'High budget' || budgetLevel === 'High') {
+    if (options.mealsPerDay === 5) {
+      extraMeal = 'A glass of warm lemon water or green tea with a handful of roasted chana.';
+    }
+  } else if (budgetLevel === 'High budget' || budgetLevel === 'High' || dailyBudget >= 300) {
     cost = '₹300+/day';
     breakfast = isVegan ? 'Oats with almond/soy milk, chia seeds, fruits and nuts' : 
                 (isNonVeg || isEgg) ? 'Oats with milk, fruits, nuts + boiled eggs' : 
@@ -234,6 +260,9 @@ function getFallbackMealPlan(budgetLevel, foodPreference) {
     dinner = isVegan ? 'Dal + tofu stir-fry + sautéed vegetables' :
              (isNonVeg) ? 'Dal + chicken stir-fry + sautéed vegetables' :
              'Dal + paneer/tofu + vegetables';
+    if (options.mealsPerDay === 5) {
+      extraMeal = 'A small bowl of mixed berries, pumpkin seeds, and a cup of green tea.';
+    }
   } else {
     // Medium budget fallback
     cost = '₹180–₹300/day';
@@ -245,21 +274,58 @@ function getFallbackMealPlan(budgetLevel, foodPreference) {
             'Roti + dal + paneer or curd + sabzi';
     snack = 'Sprouts salad or seasonal fruit';
     dinner = 'Rice/roti + dal + mixed vegetables';
+    if (options.mealsPerDay === 5) {
+      extraMeal = 'A cup of green tea or coconut water and roasted foxnuts (makhana).';
+    }
+  }
+
+  // Grocery List only when cooking access allows (Full kitchen or Basic cooking)
+  let groceryList = [];
+  if (options.cookingAccess === 'Full kitchen' || options.cookingAccess === 'Basic cooking') {
+    groceryList = [
+      'Rice / Whole wheat flour (Atta)',
+      'Oats / Poha / Upma Rava',
+      'Lentils (Moong Dal, Masoor Dal)',
+      'Seasonal local vegetables (onion, tomato, potato, spinach)',
+      isVegan ? 'Tofu / Soybean chunks' : (isNonVeg ? 'Chicken / Eggs / Paneer' : (isEgg ? 'Eggs / Paneer / Curd' : 'Paneer / Curd')),
+      'Roasted chana or peanuts'
+    ];
+  }
+
+  // Hostel tips if PG or Hostel
+  let hostelTips = [];
+  if (options.livingType === 'Hostel' || options.livingType === 'PG' || options.cookingAccess === 'Mess/tiffin dependent') {
+    hostelTips = [
+      'Use an electric kettle to boil eggs or prepare instant oats easily in your room.',
+      'Keep healthy snacks like roasted chana, peanuts, and seasonal fruits in stock to avoid outside junk food.',
+      'Ask your mess operator to reduce excess oil in your dal and vegetables.',
+      'Substitute mess dinner with curd/egg bhurji from local stalls if mess options are unhealthy.'
+    ];
   }
 
   return {
-    title: 'Balanced Wellness Meal Plan',
-    breakfast,
-    lunch,
-    eveningSnack: snack,
-    dinner,
-    approxDailyCost: cost,
-    budgetNote: 'This plan is structured using easily accessible local ingredients to match your selected budget.',
+    budgetSummary: {
+      budgetAmount: options.budgetAmount,
+      budgetPeriod: options.budgetPeriod,
+      approximateDailyBudget: options.approximateDailyBudget,
+      budgetLevel: options.budgetLevel
+    },
+    mealPlan: {
+      breakfast,
+      lunch,
+      snack,
+      dinner,
+      extraMeal
+    },
+    approximateDailyCost: cost,
     affordableSwaps: [
       'Swap expensive fruits for seasonal local fruits (e.g., bananas, papaya).',
       'Use roasted chana or peanuts instead of expensive dry fruits for snacking.',
       isVegan ? 'Use soybean chunks (nutrela) as a cheap high-protein alternative to tofu.' : 'Use eggs or soybean chunks as a cheap high-protein alternative to paneer/chicken.'
     ],
+    groceryList: groceryList.length > 0 ? groceryList : null,
+    hostelTips: hostelTips.length > 0 ? hostelTips : null,
+    budgetNote: 'This fallback plan is structured using easily accessible local ingredients to match your selected budget.',
     safetyNote: 'VitalIQ Health provides general wellness meal ideas. This is not medical treatment. Consult a nutritionist or doctor for medical diet plans.'
   };
 }
