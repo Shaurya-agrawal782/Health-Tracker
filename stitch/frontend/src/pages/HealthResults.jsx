@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { predictAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { FiAlertTriangle, FiDownload, FiShare2, FiArrowLeft, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 
 const conditionLabels = {
@@ -21,22 +22,20 @@ const formatInputValue = (value, suffix = '') => {
   return `${provided}${suffix}`;
 };
 
-// Format blood pressure — handles string labels (Normal/Elevated/High) or numeric objects
 const formatBP = (bp) => {
   if (bp === null || bp === undefined || bp === '') return 'Not provided';
-  if (typeof bp === 'string') return bp; // e.g. 'Normal', 'Elevated', 'High'
+  if (typeof bp === 'string') return bp; 
   if (typeof bp === 'object' && bp.systolic && bp.diastolic) return `${bp.systolic}/${bp.diastolic} mmHg`;
   return 'Not provided';
 };
 
-// Detect whether advanced health metrics were provided (explicit flag or non-default values)
 const hasAdvancedMetrics = (input) => {
   if (!input) return false;
   if (input.advancedMetricsProvided !== undefined) {
     return input.advancedMetricsProvided === true || input.advancedMetricsProvided === 'true';
   }
   const bpProvided = input.bloodPressure != null && input.bloodPressure !== '';
-  const glucoseProvided = input.glucose != null && input.glucose !== 100; // 100 is the backend default
+  const glucoseProvided = input.glucose != null && input.glucose !== 100; 
   return bpProvided || glucoseProvided;
 };
 
@@ -49,8 +48,11 @@ const getEstimateLabel = (source, aiGenerated) => {
 
 const HealthResults = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const isGuest = user?.isGuest || user?.role === 'guest' || user?.isMockGoogle || user?.role === 'demo';
 
   useEffect(() => {
     const load = async () => {
@@ -149,11 +151,9 @@ const HealthResults = () => {
     ...(input?.existingConditions ? [{ label: 'Existing Conditions', value: input.existingConditions }] : [])
   ];
 
-  // Find primary condition
   const primaryCondition = results?.diabetes === 1 ? 'diabetes' : results?.bp === 1 ? 'bp' : results?.stress === 1 ? 'stress' : null;
   const primaryLabel = primaryCondition ? conditionLabels[primaryCondition] : null;
 
-  // Circumference for donut
   const circumference = 2 * Math.PI * 40;
   const dashOffset = hasModelConfidence ? circumference - (confidencePercent / 100) * circumference : circumference;
 
@@ -192,7 +192,7 @@ const HealthResults = () => {
             <div>
               <strong style={{ color: '#854d0e', fontSize: '0.9rem' }}>Guest Mode Session</strong>
               <p style={{ color: '#a16207', fontSize: '0.82rem', margin: '2px 0 0 0' }}>
-                This prediction will not be saved permanently. Create an account or sign in to save your history.
+                This estimate will not be saved permanently. Create an account to save your screening history.
               </p>
             </div>
           </div>
@@ -226,7 +226,7 @@ const HealthResults = () => {
             <span>
               {usedAdvanced
                 ? 'This wellness estimate includes the optional health metrics you provided.'
-                : 'This wellness estimate is based mainly on your lifestyle inputs. You can include health metrics like blood pressure or glucose in future screenings for a more detailed estimate.'}
+                : 'This wellness estimate is based mainly on your lifestyle inputs. You can include health metrics in future screenings for a more detailed estimate.'}
             </span>
           </div>
         );
@@ -349,7 +349,6 @@ const HealthResults = () => {
                 <div style={{ fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px' }}>
                   {estimateLabel}
                 </div>
-                {/* Horizontal Progress Bar */}
                 <div style={{
                   width: '100%',
                   height: '8px',
@@ -373,7 +372,7 @@ const HealthResults = () => {
                 opacity: 0.88, 
                 fontWeight: 500 
               }}>
-                This estimate is based on the information you provided. Add optional health metrics for a more complete wellness estimate.
+                This wellness estimate is based on your lifestyle profile. Add optional health metrics for a more detailed estimate.
               </div>
             </div>
           )}
@@ -387,6 +386,7 @@ const HealthResults = () => {
         </div>
       </div>
 
+      {/* Submitted Health Inputs */}
       <div className="medical-card animate-fade-in-up" style={{ padding: '24px', marginBottom: '28px', animationDelay: '0.05s' }}>
         <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '16px' }}>
           Submitted Health Inputs
@@ -419,9 +419,8 @@ const HealthResults = () => {
         gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
         gap: '20px'
       }}>
-        {/* AI Insights & Micro-hacks */}
+        {/* Breakdown & Insights */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Detailed Breakdown */}
           <div className="medical-card animate-fade-in-up" style={{ padding: '24px', animationDelay: '0.1s', opacity: 0 }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px' }}>
               Wellness Signal Analysis
@@ -506,7 +505,6 @@ const HealthResults = () => {
             })}
           </div>
 
-          {/* AI Insights Panel */}
           {overallRisk?.insights && (
             <div className="medical-card animate-fade-in-up" style={{ 
               padding: '24px', 
@@ -529,7 +527,7 @@ const HealthResults = () => {
           )}
         </div>
 
-        {/* Recommendations & Micro-hacks */}
+        {/* Lifestyle Plan & Hacks */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="medical-card animate-fade-in-up" style={{ padding: '24px', animationDelay: '0.2s', opacity: 0 }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px' }}>
@@ -549,7 +547,6 @@ const HealthResults = () => {
             </ol>
           </div>
 
-          {/* Micro-hacks Panel */}
           {overallRisk?.micro_hacks && (
             <div className="medical-card animate-fade-in-up" style={{ 
               padding: '24px', 
@@ -582,7 +579,6 @@ const HealthResults = () => {
             </div>
           )}
 
-          {/* Disclaimer */}
           <div className="disclaimer-box animate-fade-in-up" style={{ animationDelay: '0.3s', opacity: 0 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
               <FiAlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
@@ -595,28 +591,46 @@ const HealthResults = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Guided Next Actions Button Grid */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '12px',
+        gap: '16px',
         marginTop: '28px'
       }} className="animate-fade-in-up" >
-        <Link to="/health-check" className="btn-primary" style={{ justifyContent: 'center' }}>
-          New Wellness Screening
+        <Link to="/daily-actions" className="btn-primary" style={{ justifyContent: 'center', gap: '8px', fontWeight: 700 }}>
+          View Daily Actions
         </Link>
-        <Link to="/history" className="btn-secondary" style={{ justifyContent: 'center' }}>
-          View All History
+        <Link to="/meal-planner" className="btn-secondary" style={{ justifyContent: 'center', gap: '8px', fontWeight: 700 }}>
+          Generate Meal Plan
         </Link>
+        {isGuest ? (
+          <Link to="/register" className="btn-primary" style={{ background: '#0d9488', color: 'white', justifyContent: 'center', fontWeight: 800 }}>
+            Create Account to Save History
+          </Link>
+        ) : (
+          <div style={{
+            background: 'var(--primary-50)',
+            color: 'var(--primary)',
+            padding: '12px 28px',
+            borderRadius: 'var(--radius-md)',
+            border: '2px solid var(--primary)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            fontWeight: 700,
+            fontSize: '0.95rem'
+          }}>
+            <FiCheckCircle /> Saved to History
+          </div>
+        )}
         <button 
           onClick={() => window.print()}
           className="btn-ghost" 
-          style={{ justifyContent: 'center', fontWeight: 700, color: 'var(--primary)' }}
+          style={{ justifyContent: 'center', fontWeight: 700, color: 'var(--text-secondary)' }}
         >
-          <FiDownload size={16} /> Download Wellness Summary
-        </button>
-        <button className="btn-ghost" style={{ justifyContent: 'center' }}>
-          <FiShare2 size={16} /> Discuss with a Professional
+          <FiDownload size={16} /> Download Summary
         </button>
       </div>
 

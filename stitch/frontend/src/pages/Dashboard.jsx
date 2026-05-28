@@ -8,7 +8,6 @@ import {
   FiCoffee, FiSun, FiMoon, FiDollarSign, FiList, FiTrendingUp,
   FiAlertTriangle, FiSquare, FiCheckSquare, FiAward, FiShield
 } from 'react-icons/fi';
-import HealthChart from '../components/dashboard/HealthChart';
 import { generateDailyActions } from '../utils/actionGenerator';
 import { gatherRecommendationData, generateSmartRecommendations } from '../utils/recommendations';
 import EmptyState from '../components/common/EmptyState';
@@ -45,15 +44,24 @@ const Dashboard = () => {
   const [checks, setChecks] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [chartType, setChartType] = useState('sleep-stress');
-
-  // Preferences mapping
+  
+  // Guest status
   const isGuest = user?.isGuest || user?.role === 'guest' || user?.isMockGoogle || user?.role === 'demo';
   const guestOnboarding = JSON.parse(localStorage.getItem('vitaliq_onboarding') || '{}');
   const prefs = isGuest ? guestOnboarding : (user?.preferences || {});
   const onboardingCompleted = prefs.onboardingCompleted;
 
   const firstName = isGuest ? 'Guest' : (user?.name?.split(' ')[0] || 'User');
+
+  // Local state for guest banner dismissal
+  const [showGuestBanner, setShowGuestBanner] = useState(() => {
+    return sessionStorage.getItem('vitaliq_dismiss_guest_banner') !== 'true';
+  });
+
+  const handleDismissGuestBanner = () => {
+    sessionStorage.setItem('vitaliq_dismiss_guest_banner', 'true');
+    setShowGuestBanner(false);
+  };
 
   // Today's actions & weekly habits tracking
   const [dashboardActions, setDashboardActions] = useState([]);
@@ -100,7 +108,6 @@ const Dashboard = () => {
           }
         } else {
           console.warn('Failed to load weekly check-ins:', weeklyCheckinRes.reason);
-          // Try local storage fallback
           try {
             const localList = JSON.parse(localStorage.getItem('vitaliq_weekly_checkins') || '[]');
             if (localList.length > 0) {
@@ -164,7 +171,6 @@ const Dashboard = () => {
         const nextCompletedState = !act.completed;
         markCompleted = nextCompletedState;
         
-        // Map category to habit id
         const categoryToHabitId = {
           'Hydration': 'water',
           'Sleep': 'sleep',
@@ -256,7 +262,7 @@ const Dashboard = () => {
     setWeeklyHabitCompletions(count);
   };
 
-  // Generate Personalized Focus Tagline
+  // Generate Focus Tagline
   const getFocusTagline = (prefs) => {
     if (!prefs || !prefs.onboardingCompleted) return 'Try a quick wellness check and budget meal plan.';
     const goalPhrases = (prefs.goals || []).map(g => goalMap[g] || g.toLowerCase());
@@ -267,8 +273,6 @@ const Dashboard = () => {
     }
     return `Today's focus: ${tagline}.`;
   };
-
-
 
   // Composite Wellness Score logic
   const compositeStats = useMemo(() => {
@@ -392,6 +396,56 @@ const Dashboard = () => {
     return generateSmartRecommendations(inputData);
   }, [user, checks, latestWeeklyCheckin, dashboardActions]);
 
+  // Primary Action Card Logic
+  const primaryAction = useMemo(() => {
+    if (!onboardingCompleted) {
+      return {
+        title: "Complete Onboarding",
+        description: "Answer a few simple questions so VitalIQ can tailor your meals, habits, and daily actions.",
+        btnText: "Personalize Now",
+        to: "/onboarding",
+        icon: "🎯"
+      };
+    }
+    if (checks.length === 0) {
+      return {
+        title: "Start your first wellness check",
+        description: "Take a 2-minute lifestyle assessment to establish your health baseline and unlock tailored insights.",
+        btnText: "Start Wellness Check",
+        to: "/health-check",
+        icon: "🏃"
+      };
+    }
+    if (!prefs.budgetAmount) {
+      return {
+        title: "Create your first budget meal plan",
+        description: "Set up a daily budget and get healthy, affordable meal recommendations tailored to your goals.",
+        btnText: "Generate Meal Plan",
+        to: "/meal-planner",
+        icon: "🥗"
+      };
+    }
+
+    const completedActionsCount = dashboardActions.filter(act => act.completed).length;
+    if (completedActionsCount === 0 && dashboardActions.length > 0) {
+      return {
+        title: "Complete Today's Actions",
+        description: "Take small daily steps toward your focus goals by completing your wellness actions.",
+        btnText: "View Today's Actions",
+        to: "/daily-actions",
+        icon: "⚡"
+      };
+    }
+
+    return {
+      title: "Continue Habit Progress",
+      description: "Keep up the excellent momentum! Track your daily hydration, sleep, and activity to build consistency.",
+      btnText: "Open Habits",
+      to: "/habits",
+      icon: "💧"
+    };
+  }, [onboardingCompleted, checks, prefs.budgetAmount, dashboardActions]);
+
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
@@ -400,80 +454,72 @@ const Dashboard = () => {
     );
   }
 
-  // Map checks history for Recharts HealthChart
-  const mappedChartData = checks.map(check => {
-    let stressVal = 0;
-    const stressRaw = check.input?.stressLevel;
-    if (typeof stressRaw === 'number') {
-      stressVal = stressRaw;
-    } else if (stressRaw === 'High' || stressRaw === 'high') {
-      stressVal = 8;
-    } else if (stressRaw === 'Medium' || stressRaw === 'medium') {
-      stressVal = 5;
-    } else if (stressRaw === 'Low' || stressRaw === 'low') {
-      stressVal = 2;
-    }
-
-    return {
-      date: check.date,
-      sleepHours: check.input?.sleepHours || check.input?.sleep || 0,
-      stressLevel: stressVal,
-      steps: check.input?.steps || 0
-    };
-  }).reverse();
-
   const completedCount = dashboardActions.filter(act => act.completed).length;
   const totalCount = dashboardActions.length;
 
   return (
-    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       
-      <div className="dashboard-grid">
-        {/* Guest Mode Alert Banner */}
-        {isGuest && (
-          <div className="animate-fade-in card-guest" style={{
-            background: '#fef2f2',
-            border: '1px solid #fee2e2',
-            borderRadius: '16px',
-            padding: '16px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px',
-            boxShadow: '0 2px 4px rgba(239, 68, 68, 0.05)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#991b1b' }}>
-              <FiAlertTriangle size={18} style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                You're using VitalIQ as a guest. Your results may not be saved permanently.
-              </span>
-            </div>
-            <Link to="/register" className="btn-primary" style={{ background: '#dc2626', color: 'white', fontWeight: 700, padding: '8px 16px', fontSize: '0.8rem' }}>
-              Create Account to Save Progress
-            </Link>
-          </div>
-        )}
-
-        {/* Hero Section */}
-        <div className="card-hero" style={{ 
-          background: 'linear-gradient(135deg, #0d9488 0%, #10b981 100%)',
-          padding: '36px 40px',
-          borderRadius: '24px',
-          color: 'white',
+      {/* Guest Mode Alert Banner */}
+      {isGuest && showGuestBanner && (
+        <div className="animate-fade-in card-guest" style={{
+          background: '#f0fdfa',
+          border: '1px solid #ccfbf1',
+          borderRadius: '16px',
+          padding: '16px 20px',
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
+          justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '24px',
-          boxShadow: '0 10px 30px rgba(13, 148, 136, 0.15)'
+          gap: '12px',
+          boxShadow: '0 2px 8px rgba(13, 148, 136, 0.05)'
         }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#0f766e' }}>
+            <FiAlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+              You're using guest mode. Sign in to save your progress across devices.
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <Link to="/register" className="btn-primary" style={{ background: '#0d9488', color: 'white', fontWeight: 700, padding: '8px 16px', fontSize: '0.8rem' }}>
+              Create Account
+            </Link>
+            <button onClick={handleDismissGuestBanner} className="btn-ghost" style={{ padding: '8px 16px', fontSize: '0.8rem', fontWeight: 700, border: '1px solid #cbd5e1' }}>
+              Continue as Guest
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Top Hero / Status Card */}
+      <div className="card-hero" style={{ 
+        background: 'linear-gradient(135deg, #0d9488 0%, #10b981 100%)',
+        padding: '36px 40px',
+        borderRadius: '24px',
+        color: 'white',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '24px',
+        boxShadow: '0 10px 30px rgba(13, 148, 136, 0.15)'
+      }}>
+        {!onboardingCompleted ? (
           <div style={{ flex: 1, minWidth: '280px' }}>
             <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '12px', letterSpacing: '-0.5px' }}>
-              {onboardingCompleted 
-                ? `Welcome back, ${firstName}! 👋`
-                : `Hello, ${firstName}! 👋`
-              }
+              Personalize your plan 🎯
+            </h1>
+            <p style={{ fontSize: '1rem', opacity: 0.95, maxWidth: '600px', lineHeight: 1.6, marginBottom: '20px' }}>
+              Answer a few simple questions so VitalIQ can tailor your meals, habits, and daily actions.
+            </p>
+            <Link to="/onboarding" className="btn-primary" style={{ background: 'white', color: '#0d9488', fontWeight: 800, padding: '12px 24px', fontSize: '0.9rem' }}>
+              Personalize Now
+            </Link>
+          </div>
+        ) : (
+          <div style={{ flex: 1, minWidth: '280px' }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '12px', letterSpacing: '-0.5px' }}>
+              Welcome back, {firstName}! 👋
             </h1>
             <p style={{ 
               fontSize: '0.95rem', 
@@ -483,8 +529,7 @@ const Dashboard = () => {
               borderRadius: '12px', 
               display: 'inline-block', 
               marginBottom: '16px', 
-              backdropFilter: 'blur(4px)',
-              marginRight: '8px'
+              backdropFilter: 'blur(4px)'
             }}>
               {getFocusTagline(prefs)}
             </p>
@@ -495,16 +540,10 @@ const Dashboard = () => {
                 "Complete your first wellness checkup to calculate your wellness score and get personalized insights."
               )}
             </p>
-            <div style={{ display: 'flex', gap: '16px', marginTop: '24px', flexWrap: 'wrap' }}>
-              <Link to="/health-check" className="btn-primary" style={{ background: 'white', color: '#0d9488', fontWeight: 800, padding: '12px 24px', fontSize: '0.9rem' }}>
-                <FiPlusCircle /> New Wellness Check
-              </Link>
-              <Link to="/progress" style={{ color: 'white', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
-                View Trends <FiArrowRight />
-              </Link>
-            </div>
           </div>
-          
+        )}
+        
+        {onboardingCompleted && (
           <div style={{ width: '130px', height: '130px', background: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
             {compositeStats.hasData ? (
               <>
@@ -515,608 +554,435 @@ const Dashboard = () => {
                 </svg>
               </>
             ) : (
-              <FiTarget size={44} />
+              <div style={{ textAlign: 'center', padding: '8px' }}>
+                <FiTarget size={36} style={{ marginBottom: '2px' }} />
+                <span style={{ fontSize: '0.65rem', display: 'block', fontWeight: 700, opacity: 0.8 }}>No Score</span>
+              </div>
             )}
-          </div>
-        </div>
-
-        {/* Onboarding CTA Card */}
-        {!onboardingCompleted && (
-          <div className="card-onboarding" style={{ gridColumn: 'span 2' }}>
-            <EmptyState
-              title="Personalize your wellness plan"
-              description="Answer a few simple questions so VitalIQ can tailor your meals, habits, and daily actions."
-              primaryActionLabel="Complete Onboarding"
-              primaryActionTo="/onboarding"
-              icon="🎯"
-            />
           </div>
         )}
+      </div>
 
-        {/* Today's Wellness Actions */}
-        <div className="medical-card card-actions" style={{ border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Today's Wellness Actions</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
-                {totalCount > 0 ? `${completedCount} of ${totalCount} actions completed today` : 'Personalized daily focus goals'}
-              </p>
-            </div>
-            <FiCheckCircle color="var(--primary)" size={22} />
+      {/* Primary Next Action Card */}
+      <div className="medical-card primary-action-card pulse-line animate-fade-in-up" style={{
+        padding: '24px 32px',
+        background: 'linear-gradient(145deg, #ffffff 0%, #f0faf6 100%)',
+        border: '1px solid #a0d9c9',
+        borderRadius: '20px',
+        boxShadow: '0 8px 24px rgba(13, 148, 136, 0.06)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '24px',
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, minWidth: '280px' }}>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '14px',
+            background: 'var(--primary-50)',
+            color: 'var(--primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.8rem',
+            boxShadow: '0 4px 12px rgba(13, 148, 136, 0.1)',
+            flexShrink: 0
+          }}>
+            {primaryAction.icon === "🎯" && <FiTarget size={26} />}
+            {primaryAction.icon === "🏃" && <FiActivity size={26} />}
+            {primaryAction.icon === "🥗" && <FiCoffee size={26} />}
+            {primaryAction.icon === "⚡" && <FiZap size={26} />}
+            {primaryAction.icon === "💧" && <FiList size={26} />}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {dashboardActions.slice(0, 3).map((action) => {
-              const isCompleted = action.completed;
-              return (
-                <div key={action.id} style={{ 
-                  display: 'flex', 
-                  alignItems: 'flex-start', 
-                  gap: '12px',
-                  padding: '12px 16px',
-                  background: isCompleted ? 'var(--primary-50)' : '#f8fafc',
-                  border: `1.5px solid ${isCompleted ? 'var(--primary-100)' : '#f1f5f9'}`,
-                  borderRadius: '14px',
-                  transition: 'all 0.2s'
-                }}>
-                  <button 
-                    onClick={() => handleToggleAction(action.id)}
-                    style={{
-                      background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: isCompleted ? 'var(--primary)' : '#94a3b8',
-                      marginTop: '2px', display: 'flex', alignItems: 'center'
-                    }}
-                  >
-                    {isCompleted ? <FiCheckSquare size={20} /> : <FiSquare size={20} />}
-                  </button>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ 
-                      fontWeight: 700, 
-                      fontSize: '0.9rem', 
-                      color: isCompleted ? '#475569' : '#0f172a',
-                      textDecoration: isCompleted ? 'line-through' : 'none'
-                    }}>
-                      {action.title}
-                    </span>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 0 0', lineHeight: 1.4 }}>{action.reason}</p>
-                  </div>
-                </div>
-              );
-            })}
-            {dashboardActions.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                No actions generated yet.
-              </div>
-            )}
-          </div>
-          <div style={{ marginTop: '16px', textAlign: 'center' }}>
-            <Link to="/daily-actions" className="btn-ghost" style={{ fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              View All Actions <FiArrowRight size={14} />
-            </Link>
+          <div>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Your Recommended Next Step
+            </span>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '2px 0 4px 0' }}>
+              {primaryAction.title}
+            </h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4, margin: 0 }}>
+              {primaryAction.description}
+            </p>
           </div>
         </div>
+        <Link to={primaryAction.to} className="btn-primary" style={{ 
+          padding: '12px 24px', 
+          fontSize: '0.9rem', 
+          fontWeight: 700,
+          whiteSpace: 'nowrap'
+        }}>
+          {primaryAction.btnText} <FiArrowRight />
+        </Link>
+      </div>
 
-        {/* Wellness Score Summary Card */}
-        <div className="medical-card card-score" style={{ border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Wellness Score Summary</h3>
-            <FiAward color="var(--primary)" size={22} />
-          </div>
-          {checks.length === 0 ? (
-            <EmptyState
-              plain={true}
-              title="Start your first wellness check"
-              description="Get a simple lifestyle-based wellness estimate without needing medical reports."
-              icon="🏃"
-              primaryActionLabel="Start Wellness Check"
-              primaryActionTo="/health-check"
-            />
-          ) : !compositeStats.hasData ? (
-            <div style={{ textAlign: 'center', padding: '16px 0' }}>
-              <div style={{ width: '56px', height: '56px', background: '#f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto' }}>
-                <FiTarget size={24} color="#64748b" />
+      {/* Two-Column Dashboard Grid */}
+      <div className="dashboard-layout-grid">
+        
+        {/* LEFT COLUMN: Actions, Meal Plan, Habits */}
+        <div className="dashboard-column-left">
+          
+          {/* Today's Wellness Actions */}
+          <div className="medical-card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Today's Wellness Actions</h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                  {totalCount > 0 ? `${completedCount} of ${totalCount} completed today` : 'Small daily focus goals'}
+                </p>
               </div>
-              <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '16px' }}>
-                Complete a check-in or screening to unlock your composite score.
-              </p>
-              <Link to="/weekly-checkin" className="btn-primary" style={{ display: 'inline-flex', width: '100%', justifyContent: 'center', padding: '10px 20px', fontSize: '0.85rem', fontWeight: 700 }}>
-                Complete Weekly Check-in
-              </Link>
+              <FiCheckCircle color="var(--primary)" size={20} />
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ 
-                  fontSize: '2.4rem', fontWeight: 900, color: 'var(--primary)',
-                  background: 'var(--primary-50)', width: '70px', height: '70px',
-                  borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  {compositeStats.compositeScore}
-                </div>
-                <div>
-                  <span style={{ 
-                    background: compositeStats.statusBg, color: compositeStats.statusColor,
-                    padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700,
-                    display: 'inline-block', marginBottom: '4px'
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {dashboardActions.slice(0, 3).map((action) => {
+                const isCompleted = action.completed;
+                return (
+                  <div key={action.id} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '12px',
+                    padding: '12px 14px',
+                    background: isCompleted ? 'var(--primary-50)' : '#f8fafc',
+                    border: `1px solid ${isCompleted ? 'var(--primary-100)' : '#f1f5f9'}`,
+                    borderRadius: '12px',
+                    transition: 'all 0.2s'
                   }}>
-                    {compositeStats.statusLabel}
-                  </span>
-                  <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>Composite Wellness Index</p>
-                </div>
-              </div>
-              <p style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.5, margin: 0, background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                {compositeStats.explanationText}
-              </p>
-              <Link to="/progress" className="btn-secondary" style={{ width: '100%', textAlign: 'center', padding: '10px', fontSize: '0.85rem', fontWeight: 700, display: 'block' }}>
-                View Progress Timeline
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* Budget Meal Plan Card */}
-        <div className="medical-card card-meals" style={{ border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Budget Meal Plan</h3>
-            <FiDollarSign color="var(--primary)" size={22} />
-          </div>
-          {prefs.budgetAmount ? (
-            <div>
-              <div style={{ 
-                background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '16px', padding: '16px',
-                display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px'
-              }}>
-                <div style={{ fontSize: '1.6rem' }}>🍱</div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 700 }}>Daily Budget Target</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#92400e' }}>
-                    ₹{prefs.budgetAmount} <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>/ {prefs.budgetPeriod?.toLowerCase()}</span>
-                  </div>
-                </div>
-              </div>
-              <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '16px', lineHeight: 1.4 }}>
-                Generates realistic meal ideas based on your budget, food preference, and living type.
-              </p>
-              <Link to="/meal-planner" className="btn-primary" style={{ width: '100%', textAlign: 'center', padding: '10px', fontSize: '0.85rem', fontWeight: 700 }}>
-                Generate Meal Plan
-              </Link>
-            </div>
-          ) : (
-            <EmptyState
-              plain={true}
-              title="Create your first budget meal plan"
-              description="Get affordable meal ideas based on your budget, food preference, and routine."
-              icon="🥗"
-              primaryActionLabel="Generate Meal Plan"
-              primaryActionTo="/meal-planner"
-            />
-          )}
-        </div>
-
-        {/* Weekly Habits Card */}
-        <div className="medical-card card-habits" style={{ border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Weekly Habits</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Build consistency step by step</p>
-            </div>
-            <FiList color="var(--primary)" size={22} />
-          </div>
-
-          {weeklyHabitCompletions === 0 ? (
-            <EmptyState
-              plain={true}
-              title="Start with one small habit"
-              description="Track simple habits like water, sleep, walking, and screen breaks."
-              icon="💧"
-              primaryActionLabel="Start Habits"
-              primaryActionTo="/habits"
-            />
-          ) : (
-            <>
-              {/* Progress indicators */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
-                <span>Today: {Object.values(habits).filter(Boolean).length}/6</span>
-                <span style={{ color: 'var(--primary)' }}>{weeklyHabitCompletions} logged this week</span>
-              </div>
-              <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', marginBottom: '20px' }}>
-                <div style={{ 
-                  width: `${(Object.values(habits).filter(Boolean).length / 6) * 100}%`, 
-                  height: '100%', 
-                  background: 'var(--primary)',
-                  transition: 'width 0.3s ease'
-                }} />
-              </div>
-
-              {/* List of habits */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
-                {[
-                  { key: 'water', label: 'Hydration (Water)', icon: '💧', target: '6 glasses' },
-                  { key: 'sleep', label: 'Sleep Target', icon: '🌙', target: prefs.sleepTarget || '7-9 hours' },
-                  { key: 'walk', label: 'Movement (Walk)', icon: '🏃', target: '20 mins activity' },
-                  { key: 'mealPlan', label: 'Meal Consistency', icon: '🥗', target: 'Follow meals' },
-                  { key: 'screenBreak', label: 'Screen Breaks', icon: '💻', target: '3 breaks' },
-                  { key: 'stressReset', label: 'Stress Reset', icon: '🧘', target: '5 mins reset' }
-                ].map((h) => {
-                  const done = habits[h.key];
-                  return (
-                    <div 
-                      key={h.key}
-                      onClick={() => handleToggleHabit(h.key)}
+                    <button 
+                      onClick={() => handleToggleAction(action.id)}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px 14px',
-                        background: done ? '#f0fdf4' : '#f8fafc',
-                        border: `1.5px solid ${done ? '#dcfce7' : '#f1f5f9'}`,
-                        borderRadius: '12px',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s'
+                        background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: isCompleted ? 'var(--primary)' : '#94a3b8',
+                        display: 'flex', alignItems: 'center'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '1.2rem' }}>{h.icon}</span>
-                        <div>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>{h.label}</span>
-                          <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '8px' }}>({h.target})</span>
-                        </div>
-                      </div>
-                      {done ? <FiCheckCircle color="#10b981" size={18} /> : <FiSquare color="#94a3b8" size={18} />}
+                      {isCompleted ? <FiCheckSquare size={18} /> : <FiSquare size={18} />}
+                    </button>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ 
+                        fontWeight: 700, 
+                        fontSize: '0.85rem', 
+                        color: isCompleted ? '#475569' : '#0f172a',
+                        textDecoration: isCompleted ? 'line-through' : 'none'
+                      }}>
+                        {action.title}
+                      </span>
+                      <span style={{ 
+                        marginLeft: '8px',
+                        background: isCompleted ? '#ccfbf1' : '#e2e8f0',
+                        color: isCompleted ? '#0f766e' : '#475569',
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        fontSize: '0.65rem',
+                        fontWeight: 700
+                      }}>
+                        {action.category}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-          <div style={{ marginTop: '16px', textAlign: 'center' }}>
-            <Link to="/habits" className="btn-ghost" style={{ fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              Open Habit Tracker <FiArrowRight size={14} />
-            </Link>
-          </div>
-        </div>
-
-        {/* Progress Timeline Card */}
-        <div className="medical-card card-progress" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Your Progress</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Wellness trend timeline</p>
-            </div>
-            {checks.length > 0 && (
-              <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '2px', borderRadius: '8px' }}>
-                <button 
-                  onClick={() => setChartType('sleep-stress')}
-                  style={{
-                    background: chartType === 'sleep-stress' ? 'white' : 'none',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '4px 8px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    color: chartType === 'sleep-stress' ? 'var(--primary)' : '#64748b',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Sleep & Stress
-                </button>
-                <button 
-                  onClick={() => setChartType('activity')}
-                  style={{
-                    background: chartType === 'activity' ? 'white' : 'none',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '4px 8px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    color: chartType === 'activity' ? 'var(--primary)' : '#64748b',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Steps Activity
-                </button>
-              </div>
-            )}
-          </div>
-
-          {checks.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', padding: '40px 0', border: '2px dashed #f1f5f9', borderRadius: '16px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1
-            }}>
-              <FiTrendingUp size={36} color="#cbd5e1" style={{ marginBottom: '12px' }} />
-              <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0, maxWidth: '260px', lineHeight: 1.4 }}>
-                Your progress timeline will appear after your first wellness check.
-              </p>
-            </div>
-          ) : (
-            <div style={{ flex: 1, minHeight: '260px' }}>
-              <HealthChart 
-                data={mappedChartData} 
-                type={chartType} 
-                title={chartType === 'sleep-stress' ? 'Daily Sleep vs Stress' : 'Daily Steps Activity'} 
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Quick Actions Grid */}
-        <div className="medical-card card-quick">
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '16px' }}>Quick Actions</h3>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', 
-            gap: '12px' 
-          }}>
-            {[
-              { to: '/health-check', label: 'Wellness Check', icon: <FiPlusCircle />, bg: 'linear-gradient(135deg, #0d9488, #0f766e)' },
-              { to: '/meal-planner', label: 'Budget Meal Plan', icon: <FiCoffee />, bg: 'linear-gradient(135deg, #0284c7, #0369a1)' },
-              { to: '/habits', label: 'Track Habits', icon: <FiList />, bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' },
-              { to: '/weekly-checkin', label: 'Weekly Check-in', icon: <FiCalendar />, bg: 'linear-gradient(135deg, #f59e0b, #d97706)' },
-              { to: '/progress', label: 'View Progress', icon: <FiTrendingUp />, bg: 'linear-gradient(135deg, #10b981, #059669)' }
-            ].map((action, idx) => (
-              <Link 
-                key={idx} 
-                to={action.to} 
-                style={{ 
-                  background: action.bg, 
-                  color: 'white', 
-                  textDecoration: 'none', 
-                  padding: '16px', 
-                  borderRadius: '16px', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  gap: '8px', 
-                  textAlign: 'center',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                <span style={{ fontSize: '1.4rem' }}>{action.icon}</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{action.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Weekly Check-in Widget Card */}
-        <div className="medical-card card-reflection" style={{ border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Weekly Reflection</h3>
-            <FiCalendar color="var(--primary)" size={22} />
-          </div>
-
-          {latestWeeklyCheckin ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{
-                  width: '60px',
-                  height: '60px',
-                  borderRadius: '14px',
-                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
-                  color: 'white',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 12px rgba(13, 148, 136, 0.2)'
-                }}>
-                  <span style={{ fontSize: '1.4rem', fontWeight: 900 }}>{latestWeeklyCheckin.weeklyScore}</span>
-                  <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>/ 100</span>
-                </div>
-                <div>
-                  <span style={{
-                    background: latestWeeklyCheckin.status === 'Consistent' ? '#ecfdf5' : latestWeeklyCheckin.status === 'Improving' ? '#f0fdfa' : latestWeeklyCheckin.status === 'Getting started' ? '#fef3c7' : '#fef2f2',
-                    color: latestWeeklyCheckin.status === 'Consistent' ? '#059669' : latestWeeklyCheckin.status === 'Improving' ? '#0d9488' : latestWeeklyCheckin.status === 'Getting started' ? '#d97706' : '#dc2626',
-                    border: `1px solid ${latestWeeklyCheckin.status === 'Consistent' ? '#a7f3d0' : latestWeeklyCheckin.status === 'Improving' ? '#99f6e4' : latestWeeklyCheckin.status === 'Getting started' ? '#fde68a' : '#fecaca'}`,
-                    padding: '3px 8px',
-                    borderRadius: '10px',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    display: 'inline-block',
-                    marginBottom: '2px'
-                  }}>
-                    {latestWeeklyCheckin.status}
-                  </span>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
-                    Logged {new Date(latestWeeklyCheckin.createdAt || latestWeeklyCheckin.weekStartDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  </p>
-                </div>
-              </div>
-
-              {latestWeeklyCheckin && (new Date() - new Date(latestWeeklyCheckin.createdAt || latestWeeklyCheckin.weekStartDate)) < 7 * 24 * 60 * 60 * 1000 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4, margin: 0 }}>
-                    You're up to date! Your next lifestyle reflection check-in is due in a few days.
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <Link to="/progress" className="btn-secondary" style={{ flex: 1, textAlign: 'center', padding: '8px', fontSize: '0.8rem', fontWeight: 700 }}>
-                      View Weekly Progress
-                    </Link>
-                    <Link to="/weekly-checkin" className="btn-ghost" style={{ padding: '8px 12px', fontSize: '0.8rem', fontWeight: 700, border: '1px solid var(--border-light)' }}>
-                      Retake
-                    </Link>
                   </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '10px', fontSize: '0.78rem', color: '#b45309', fontWeight: 600 }}>
-                    ⚡ It has been over 7 days since your last reflection check-in.
-                  </div>
-                  <Link to="/weekly-checkin" className="btn-primary" style={{ width: '100%', textAlign: 'center', padding: '10px', fontSize: '0.85rem', fontWeight: 700 }}>
-                    Complete Weekly Check-in
-                  </Link>
+                );
+              })}
+              
+              {dashboardActions.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                  No actions generated yet. Complete onboarding or a checkup to generate focus targets.
                 </div>
               )}
             </div>
-          ) : (
-            <EmptyState
-              plain={true}
-              title="Complete your first weekly check-in"
-              description="Reflect on sleep, stress, food, activity, and energy to track your progress."
-              icon="📅"
-              primaryActionLabel="Start Weekly Check-in"
-              primaryActionTo="/weekly-checkin"
-            />
-          )}
-        </div>
 
-        {/* Smart Recommendations Card */}
-        <div className="medical-card card-recs" style={{ border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Smart Recommendations</h3>
-              <span style={{ 
-                background: 'var(--primary-50)', color: 'var(--primary)',
-                padding: '4px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700,
-                display: 'inline-block', marginTop: '6px'
-              }}>
-                Focus: {smartRecsResult.focusArea}
-              </span>
+            <div style={{ marginTop: '16px', textAlign: 'center' }}>
+              <Link to="/daily-actions" className="btn-ghost" style={{ width: '100%', fontSize: '0.8rem', padding: '8px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                View All Actions <FiArrowRight size={12} />
+              </Link>
             </div>
-            <FiTarget color="var(--primary)" size={22} />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
-            {smartRecsResult.recommendations.slice(0, 3).map((rec) => (
-              <div key={rec.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.2rem', lineHeight: '1rem', marginTop: '-2px' }}>•</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>{rec.title}</div>
-                  <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', margin: '2px 0 0 0', lineHeight: 1.4 }}>{rec.action}</p>
+          {/* Budget Meal Plan Preview */}
+          <div className="medical-card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Budget Meal Plan Preview</h3>
+              <FiDollarSign color="var(--primary)" size={20} />
+            </div>
+
+            {prefs.budgetAmount ? (
+              <div>
+                <div style={{ 
+                  background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '12px',
+                  display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px'
+                }}>
+                  <div style={{ fontSize: '1.4rem' }}>🍱</div>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#b45309', fontWeight: 700, textTransform: 'uppercase' }}>Daily Budget Target</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#92400e' }}>
+                      ₹{prefs.budgetAmount} <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>/ {prefs.budgetPeriod?.toLowerCase()}</span>
+                    </div>
+                  </div>
                 </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.4 }}>
+                  Plan Status: Active! Healthy meals structured under ₹{prefs.budgetAmount}.
+                </p>
+                <Link to="/meal-planner" className="btn-primary" style={{ width: '100%', padding: '10px', fontSize: '0.8rem', fontWeight: 700 }}>
+                  View Meal Plan
+                </Link>
               </div>
-            ))}
-            {smartRecsResult.recommendations.length === 0 && (
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
-                No recommendations generated yet. Log data to receive suggestions.
-              </p>
+            ) : (
+              <div>
+                <EmptyState
+                  plain={true}
+                  title="Create your first budget meal plan"
+                  description="Get affordable meal suggestions based on your personal budget and preferences."
+                  icon="🥗"
+                />
+                <Link to="/meal-planner" className="btn-primary" style={{ width: '100%', padding: '10px', fontSize: '0.8rem', fontWeight: 700, marginTop: '12px' }}>
+                  Generate Meal Plan
+                </Link>
+              </div>
             )}
           </div>
 
-          <Link to="/recommendations" className="btn-secondary" style={{ width: '100%', textAlign: 'center', padding: '10px', fontSize: '0.85rem', fontWeight: 700, display: 'block' }}>
-            View All Recommendations
-          </Link>
+          {/* Habit Progress Preview */}
+          <div className="medical-card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Habit Progress Preview</h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Daily consistency check</p>
+              </div>
+              <FiList color="var(--primary)" size={20} />
+            </div>
+
+            {weeklyHabitCompletions === 0 && Object.values(habits).filter(Boolean).length === 0 ? (
+              <div>
+                <EmptyState
+                  plain={true}
+                  title="Track one small habit today"
+                  description="Build baseline streaks in hydration, step goals, or screens break routines."
+                  icon="💧"
+                />
+                <Link to="/habits" className="btn-primary" style={{ width: '100%', padding: '10px', fontSize: '0.8rem', fontWeight: 700, marginTop: '12px' }}>
+                  Open Habits
+                </Link>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                  <span>Today's Top Habits</span>
+                  <span style={{ color: 'var(--primary)' }}>{weeklyHabitCompletions} logged this week</span>
+                </div>
+                <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden', marginBottom: '16px' }}>
+                  <div style={{ 
+                    width: `${(Object.values(habits).filter(Boolean).length / 6) * 100}%`, 
+                    height: '100%', 
+                    background: 'var(--primary)',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {[
+                    { key: 'water', label: 'Hydration (Water)', icon: '💧', target: '6 glasses' },
+                    { key: 'sleep', label: 'Sleep Target', icon: '🌙', target: prefs.sleepTarget || '7-9 hours' },
+                    { key: 'walk', label: 'Movement (Walk)', icon: '🏃', target: '20 mins' }
+                  ].map((h) => {
+                    const done = habits[h.key];
+                    return (
+                      <div 
+                        key={h.key}
+                        onClick={() => handleToggleHabit(h.key)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 12px',
+                          background: done ? '#f0fdf4' : '#f8fafc',
+                          border: `1px solid ${done ? '#dcfce7' : '#f1f5f9'}`,
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '1.1rem' }}>{h.icon}</span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>{h.label}</span>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>({h.target})</span>
+                        </div>
+                        {done ? <FiCheckCircle color="#10b981" size={16} /> : <FiSquare color="#94a3b8" size={16} />}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ marginTop: '16px' }}>
+                  <Link to="/habits" className="btn-ghost" style={{ width: '100%', fontSize: '0.8rem', padding: '8px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    Open Habits <FiArrowRight size={12} />
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+
         </div>
 
-        {/* History Preview Card */}
-        <div className="medical-card card-history">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Recent Wellness History</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Latest checked risk reports</p>
+        {/* RIGHT COLUMN: Progress, Recommendations */}
+        <div className="dashboard-column-right">
+          
+          {/* Progress Preview */}
+          <div className="medical-card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Progress Preview</h3>
+              <FiTrendingUp color="var(--primary)" size={20} />
             </div>
-            <Link to="/history" style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 700, textDecoration: 'none' }}>
-              See All
-            </Link>
-          </div>
-          {checks.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', border: '2px dashed #f1f5f9', borderRadius: '16px' }}>
-              <FiActivity size={32} color="#cbd5e1" style={{ marginBottom: '12px' }} />
-              <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>No screenings performed yet.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {checks.slice(0, 3).map((check, i) => (
-                <div key={i} style={{ 
-                  padding: '14px', 
-                  background: '#f8fafc', 
-                  borderRadius: '14px', 
-                  border: '1px solid #f1f5f9',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>
-                      {check.checkType || 'Screening'}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
-                      {new Date(check.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </div>
+
+            {!compositeStats.hasData ? (
+              <div>
+                <EmptyState
+                  plain={true}
+                  title="Start your first wellness check"
+                  description="Complete a lifestyle screening checkup to see your progress metrics and trends."
+                  icon="📈"
+                />
+                <Link to="/health-check" className="btn-primary" style={{ width: '100%', padding: '10px', fontSize: '0.8rem', fontWeight: 700, marginTop: '12px' }}>
+                  Start Wellness Check
+                </Link>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ 
+                    fontSize: '2rem', fontWeight: 900, color: 'var(--primary)',
+                    background: 'var(--primary-50)', width: '60px', height: '60px',
+                    borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {compositeStats.compositeScore}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div>
                     <span style={{ 
-                      background: check.overallRisk?.level === 'High' ? '#fee2e2' : check.overallRisk?.level === 'Medium' ? '#fef3c7' : '#dcfce7',
-                      color: check.overallRisk?.level === 'High' ? '#b91c1c' : check.overallRisk?.level === 'Medium' ? '#b45309' : '#15803d',
-                      padding: '3px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 700
+                      background: compositeStats.statusBg, color: compositeStats.statusColor,
+                      padding: '3px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 700,
+                      display: 'inline-block', marginBottom: '2px'
                     }}>
-                      {check.overallRisk?.level || 'Low'}
+                      {compositeStats.statusLabel}
                     </span>
-                    <Link to={`/results/${check._id}`} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
-                      <FiEye /> View
-                    </Link>
+                    <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>Latest Composite Score</p>
+                  </div>
+                </div>
+                
+                {latestWeeklyCheckin && (
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                      <span>Weekly Reflection:</span>
+                      <span style={{ color: 'var(--primary)' }}>{latestWeeklyCheckin.weeklyScore}/100</span>
+                    </div>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '4px 0 0 0', lineHeight: 1.3 }}>
+                      Status classified as "{latestWeeklyCheckin.status}". Checked {new Date(latestWeeklyCheckin.createdAt || latestWeeklyCheckin.weekStartDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}.
+                    </p>
+                  </div>
+                )}
+
+                <p style={{ fontSize: '0.8rem', color: '#334155', lineHeight: 1.4, margin: 0 }}>
+                  {compositeStats.explanationText}
+                </p>
+                
+                <Link to="/progress" className="btn-primary" style={{ width: '100%', padding: '10px', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center' }}>
+                  View Progress
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Smart Recommendations Preview */}
+          <div className="medical-card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Smart Recommendations</h3>
+                <span style={{ 
+                  background: 'var(--primary-50)', color: 'var(--primary)',
+                  padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 700,
+                  display: 'inline-block', marginTop: '4px'
+                }}>
+                  Focus: {smartRecsResult.focusArea}
+                </span>
+              </div>
+              <FiTarget color="var(--primary)" size={20} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+              {smartRecsResult.recommendations.slice(0, 3).map((rec) => (
+                <div key={rec.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.1rem', lineHeight: '1rem', marginTop: '-1px' }}>•</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>{rec.title}</div>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '1px 0 0 0', lineHeight: 1.3 }}>{rec.action}</p>
                   </div>
                 </div>
               ))}
+              
+              {smartRecsResult.recommendations.length === 0 && (
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                  No recommendations generated yet. Log data to receive suggestions.
+                </p>
+              )}
             </div>
-          )}
+
+            <Link to="/recommendations" className="btn-primary" style={{ width: '100%', padding: '10px', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', display: 'block' }}>
+              View Recommendations
+            </Link>
+          </div>
+
         </div>
 
-        {/* Safety Wording Disclaimer */}
-        <div className="card-safety" style={{ 
-          textAlign: 'center', 
-          padding: '12px 20px', 
-          background: '#f8fafc', 
-          border: '1.5px solid #f1f5f9', 
-          borderRadius: '14px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          gap: '8px', 
-          color: '#64748b'
-        }}>
-          <FiShield size={16} style={{ flexShrink: 0, color: 'var(--primary)' }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.4 }}>
-            <strong>Safety Disclaimer: </strong>
-            VitalIQ Health provides wellness insights, lifestyle risk estimates, and general wellness suggestions only. This platform does not provide medical diagnosis, disease prediction, treatment, or cure. Consult a qualified professional for medical advice.
-          </span>
-        </div>
+      </div>
+
+      {/* Safety Wording Disclaimer */}
+      <div className="card-safety" style={{ 
+        textAlign: 'center', 
+        padding: '12px 20px', 
+        background: '#f8fafc', 
+        border: '1px solid #f1f5f9', 
+        borderRadius: '12px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        gap: '8px', 
+        color: '#64748b',
+        marginTop: '12px'
+      }}>
+        <FiShield size={16} style={{ flexShrink: 0, color: 'var(--primary)' }} />
+        <span style={{ fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.4 }}>
+          <strong>Safety Disclaimer: </strong>
+          VitalIQ Health provides wellness insights, lifestyle risk estimates, and general wellness suggestions only. This platform does not provide medical diagnosis, disease prediction, treatment, or cure. Consult a qualified professional for medical advice.
+        </span>
       </div>
 
       <style>{`
-        .dashboard-grid {
+        .dashboard-layout-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 24px;
         }
-        .card-guest { grid-column: span 2; }
-        .card-hero { grid-column: span 2; }
-        .card-onboarding { grid-column: span 2; }
-        .card-actions { grid-column: 1; }
-        .card-habits { grid-column: 1; }
-        .card-score { grid-column: 2; }
-        .card-meals { grid-column: 2; }
-        .card-progress { grid-column: 1; }
-        .card-quick { grid-column: span 2; }
-        .card-reflection { grid-column: 2; }
-        .card-recs { grid-column: 2; }
-        .card-history { grid-column: 2; }
-        .card-safety { grid-column: span 2; }
+        .dashboard-column-left {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+        .dashboard-column-right {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
 
         @media (max-width: 900px) {
-          .dashboard-grid {
+          .dashboard-layout-grid {
             display: flex;
             flex-direction: column;
             gap: 16px;
           }
-          .card-guest { order: 0; }
-          .card-hero { order: 1; }
-          .card-actions { order: 2; }
-          .card-score { order: 3; }
-          .card-meals { order: 4; }
-          .card-habits { order: 5; }
-          .card-progress { order: 6; }
-          .card-quick { order: 7; }
-          .card-reflection { order: 8; }
-          .card-recs { order: 9; }
-          .card-history { order: 10; }
-          .card-safety { order: 11; }
-        }
-        @media (max-width: 600px) {
+          .dashboard-column-left {
+            gap: 16px;
+          }
+          .dashboard-column-right {
+            gap: 16px;
+          }
           .card-hero {
             padding: 24px 20px !important;
             border-radius: 16px !important;
@@ -1131,4 +997,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

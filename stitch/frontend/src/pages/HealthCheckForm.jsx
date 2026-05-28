@@ -1,22 +1,22 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { predictAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import {
   FiCheck, FiChevronRight, FiChevronLeft, FiUser, FiActivity,
-  FiMoon, FiHeart, FiEye, FiSend, FiAlertTriangle, FiPlus, FiMinus
+  FiMoon, FiHeart, FiEye, FiSend, FiAlertTriangle, FiPlus, FiMinus, FiShield
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
-// ─── Step metadata ────────────────────────────────────────────────────────────
+// Steps list (Welcome is rendered dynamically before steps 1 to 5)
 const STEPS = [
-  { label: 'Basic Details',    icon: <FiUser     size={14} /> },
-  { label: 'Daily Lifestyle',  icon: <FiActivity size={14} /> },
-  { label: 'Sleep & Stress',   icon: <FiMoon     size={14} /> },
-  { label: 'Health Metrics',   icon: <FiHeart    size={14} /> },
-  { label: 'Symptoms & Review',icon: <FiEye      size={14} /> },
+  { label: 'Basic Details',     icon: <FiUser     size={14} /> },
+  { label: 'Daily Routine',     icon: <FiActivity size={14} /> },
+  { label: 'Sleep & Stress',    icon: <FiMoon     size={14} /> },
+  { label: 'Optional Metrics',  icon: <FiHeart    size={14} /> },
+  { label: 'Symptoms & Review', icon: <FiEye      size={14} /> },
 ];
 
-// ─── Option mappings (label → backend value(s)) ───────────────────────────────
 const ACTIVITY_OPTIONS = [
   { label: 'Mostly sitting',    sub: 'Desk job, very little movement',          activity_level: 'Sedentary', daily_activity: 10  },
   { label: 'Light movement',    sub: 'Short walks, occasional light tasks',     activity_level: 'Light',     daily_activity: 30  },
@@ -83,20 +83,16 @@ const FAMILY_HISTORY_OPTIONS = [
 ];
 
 const SYMPTOM_OPTIONS = [
-  { id: 'fatigue',     label: 'Frequent fatigue or low energy',           serious: false },
-  { id: 'headache',    label: 'Frequent headaches',                       serious: false },
-  { id: 'poor_sleep',  label: 'Poor sleep quality',                       serious: false },
-  { id: 'high_stress', label: 'High stress / anxiety recently',           serious: false },
-  { id: 'thirst',      label: 'Unusual thirst or frequent urination',     serious: false },
-  { id: 'blurry',      label: 'Occasional blurry vision',                 serious: false },
-  { id: 'shortbreath', label: 'Shortness of breath with light activity',  serious: false },
-  { id: 'chest',       label: 'Chest discomfort or pressure',             serious: true  },
-  { id: 'dizziness',   label: 'Severe or recurring dizziness',            serious: true  },
-  { id: 'numb',        label: 'Tingling or numbness in hands/feet',       serious: false },
-  { id: 'none',        label: 'None of the above',                        serious: false },
+  { id: 'fatigue',     label: 'Frequent tiredness',                       serious: false },
+  { id: 'headache',    label: 'Headache',                                 serious: false },
+  { id: 'poor_sleep',  label: 'Poor sleep',                               serious: false },
+  { id: 'high_stress', label: 'High stress',                              serious: false },
+  { id: 'thirst',      label: 'Increased thirst',                         serious: false },
+  { id: 'chest',       label: 'Chest discomfort',                         serious: true  },
+  { id: 'dizziness',   label: 'Dizziness',                                 serious: true  },
+  { id: 'none',        label: 'None of these',                            serious: false },
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 const calcBmi = (weight, height) => {
   if (!weight || !height || height <= 0) return null;
   return +(parseFloat(weight) / ((parseFloat(height) / 100) ** 2)).toFixed(1);
@@ -110,18 +106,18 @@ const bmiCategory = (bmi) => {
   return '(Obese)';
 };
 
-// ─── Reusable Components ──────────────────────────────────────────────────────
 const OptionCard = ({ option, selected, onSelect }) => (
   <button
     type="button"
     onClick={() => onSelect(option)}
     style={{
-      width: '100%', textAlign: 'left', padding: '14px 16px',
+      width: '100%', textAlign: 'left', padding: '16px',
       borderRadius: 'var(--radius-md)',
       border: `2px solid ${selected ? 'var(--primary)' : 'var(--border-light)'}`,
       background: selected ? 'var(--primary-50)' : 'white',
       cursor: 'pointer', transition: 'all var(--transition-base)',
       display: 'flex', alignItems: 'center', gap: '12px',
+      boxShadow: selected ? '0 4px 12px rgba(13, 148, 136, 0.05)' : 'none'
     }}
   >
     <div style={{
@@ -133,11 +129,11 @@ const OptionCard = ({ option, selected, onSelect }) => (
       {selected && <FiCheck size={11} color="white" />}
     </div>
     <div>
-      <div style={{ fontSize: '0.9rem', fontWeight: 600, color: selected ? 'var(--primary)' : 'var(--text-primary)' }}>
+      <div style={{ fontSize: '0.88rem', fontWeight: 700, color: selected ? 'var(--primary)' : 'var(--text-primary)' }}>
         {option.label}
       </div>
       {option.sub && (
-        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+        <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '2px' }}>
           {option.sub}
         </div>
       )}
@@ -147,10 +143,10 @@ const OptionCard = ({ option, selected, onSelect }) => (
 
 const SectionTitle = ({ icon, title, subtitle }) => (
   <div style={{ marginBottom: '24px' }}>
-    <h2 style={{ fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a' }}>
       {icon} {title}
     </h2>
-    {subtitle && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px' }}>{subtitle}</p>}
+    {subtitle && <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px', lineHeight: 1.4 }}>{subtitle}</p>}
   </div>
 );
 
@@ -159,33 +155,36 @@ const ReviewRow = ({ label, value }) => (
     padding: '10px 14px', background: 'var(--primary-50)',
     borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
   }}>
-    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{label}</span>
-    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>{value}</span>
+    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{label}</span>
+    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)' }}>{value}</span>
   </div>
 );
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 const HealthCheckForm = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  // Welcome screen toggle state
+  const [started, setStarted] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // ── Step 1: Basic Details
+  // Demographics
   const [age, setAge]       = useState('');
   const [gender, setGender] = useState('');
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
 
-  // ── Step 2: Daily Lifestyle
+  // Daily Routine
   const [activityOption, setActivityOption] = useState(null);
   const [screenOption,   setScreenOption]   = useState(null);
   const [workOption,     setWorkOption]     = useState(null);
 
-  // ── Step 3: Sleep & Stress
+  // Sleep & Stress
   const [sleepOption,  setSleepOption]  = useState(null);
   const [stressOption, setStressOption] = useState(null);
 
-  // ── Step 4: Optional Health Metrics
+  // Optional Health Metrics
   const [showAdvanced,    setShowAdvanced]    = useState(false);
   const [bpOption,        setBpOption]        = useState(null);
   const [systolic,        setSystolic]        = useState('');
@@ -197,8 +196,25 @@ const HealthCheckForm = () => {
   const [alcohol,         setAlcohol]         = useState(null);
   const [existingConditions, setExistingConditions] = useState('');
 
-  // ── Step 5: Symptoms
+  // Symptoms
   const [symptoms, setSymptoms] = useState([]);
+
+  // Fetch Onboarding Smart Defaults
+  const isGuest = user?.isGuest || user?.role === 'guest' || user?.isMockGoogle || user?.role === 'demo';
+  const guestOnboarding = JSON.parse(localStorage.getItem('vitaliq_onboarding') || '{}');
+  const prefs = isGuest ? guestOnboarding : (user?.preferences || {});
+
+  useEffect(() => {
+    if (prefs.activityLevel) {
+      const act = prefs.activityLevel.toLowerCase();
+      let matchedOpt = null;
+      if (act.includes('sedentary')) matchedOpt = ACTIVITY_OPTIONS[0];
+      else if (act.includes('light')) matchedOpt = ACTIVITY_OPTIONS[1];
+      else if (act.includes('moderate')) matchedOpt = ACTIVITY_OPTIONS[2];
+      else if (act.includes('active')) matchedOpt = ACTIVITY_OPTIONS[3];
+      if (matchedOpt) setActivityOption(matchedOpt);
+    }
+  }, [prefs.activityLevel]);
 
   const bmi = useMemo(() => calcBmi(weight, height), [weight, height]);
   const hasSerious = symptoms.some(s => SYMPTOM_OPTIONS.find(o => o.id === s)?.serious);
@@ -214,28 +230,49 @@ const HealthCheckForm = () => {
     });
   };
 
-  // ── Step validation
+  // Inline Validation States
+  const getValidationError = (field) => {
+    if (field === 'age') {
+      if (age !== '' && (parseFloat(age) <= 0 || parseFloat(age) > 120)) {
+        return "Age must be between 1 and 120";
+      }
+    }
+    if (field === 'height') {
+      if (height !== '' && (parseFloat(height) < 50 || parseFloat(height) > 300)) {
+        return "Height must be between 50 and 300 cm";
+      }
+    }
+    if (field === 'weight') {
+      if (weight !== '' && (parseFloat(weight) < 10 || parseFloat(weight) > 300)) {
+        return "Weight must be between 10 and 300 kg";
+      }
+    }
+    return null;
+  };
+
+  // Step Validation Check
   const canProceed = () => {
-    if (currentStep === 0) return age && gender && height && weight && parseFloat(age) > 0 && parseFloat(height) > 0 && parseFloat(weight) > 0;
+    if (currentStep === 0) {
+      return age && gender && height && weight &&
+             !getValidationError('age') &&
+             !getValidationError('height') &&
+             !getValidationError('weight');
+    }
     if (currentStep === 1) return activityOption && screenOption && workOption;
     if (currentStep === 2) return sleepOption && stressOption;
     return true;
   };
 
   const nextStep = () => {
-    if (!canProceed()) {
-      toast.error('Please complete all required fields before continuing.');
-      return;
-    }
+    if (!canProceed()) return;
     setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
   };
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
 
-  // ── Build payload & submit
+  // Submit wellness screening inputs
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // Resolve glucose
       let resolvedGlucose = null;
       if (showAdvanced && glucoseOption) {
         if (glucoseOption.value === 'Exact' && glucoseValue) {
@@ -245,7 +282,6 @@ const HealthCheckForm = () => {
         }
       }
 
-      // Resolve blood pressure
       let resolvedBP = null;
       let resolvedSystolic = null;
       let resolvedDiastolic = null;
@@ -253,34 +289,30 @@ const HealthCheckForm = () => {
         if (bpOption.value === 'Exact' && systolic && diastolic) {
           resolvedSystolic = parseFloat(systolic);
           resolvedDiastolic = parseFloat(diastolic);
-          resolvedBP = null; // exact values stored in systolic/diastolic
+          resolvedBP = null; 
         } else if (bpOption.value !== 'Exact') {
           resolvedBP = bpOption.value;
         }
       }
 
       const payload = {
-        // Demographics
         age:    parseFloat(age),
         gender: gender.toLowerCase(),
         height: parseFloat(height),
         weight: parseFloat(weight),
         bmi:    bmi,
-        // Lifestyle (standard names)
         activity_level:       activityOption.activity_level,
         dailyActivityMinutes: activityOption.daily_activity,
         daily_activity:       activityOption.daily_activity,
-        activity:             activityOption.daily_activity * 7, // approx weekly minutes
+        activity:             activityOption.daily_activity * 7, 
         screenHours:          screenOption.screen,
         screen:               screenOption.screen,
         workHours:            workOption.work,
         work:                 workOption.work,
-        // Sleep & Stress
         sleepHours:   sleepOption.sleep,
         sleep:        sleepOption.sleep,
         stressLevel:  stressOption.stress_level,
         stress_level: stressOption.stress_level,
-        // Optional advanced metrics — always explicitly null when not provided
         advancedMetricsProvided: showAdvanced,
         glucose:               resolvedGlucose,
         bloodPressure:         resolvedBP,
@@ -291,9 +323,7 @@ const HealthCheckForm = () => {
         smoking:               showAdvanced && smoking !== null ? smoking : null,
         alcohol:               showAdvanced && alcohol !== null ? alcohol : null,
         existingConditions:    showAdvanced && existingConditions.trim() ? existingConditions.trim() : null,
-        // Salt stays at default — not asked to avoid confusion
         salt: 8,
-        // Symptoms & check type
         symptoms: symptoms.includes('none')
           ? []
           : symptoms.map(id => SYMPTOM_OPTIONS.find(o => o.id === id)?.label).filter(Boolean),
@@ -311,7 +341,6 @@ const HealthCheckForm = () => {
           const existing = localStorage.getItem('vitaliq_wellness_checks');
           const list = existing ? JSON.parse(existing) : [];
           if (Array.isArray(list)) {
-            // Remove any duplicates with same id
             const filtered = list.filter(item => item.id !== predictionId);
             filtered.unshift(predictionData);
             localStorage.setItem('vitaliq_wellness_checks', JSON.stringify(filtered.slice(0, 50)));
@@ -330,90 +359,206 @@ const HealthCheckForm = () => {
     }
   };
 
-  // ─── Step Renderers ──────────────────────────────────────────────────────────
+  // Welcome Screen (Step 0)
+  if (!started) {
+    return (
+      <div className="page-enter" style={{ maxWidth: '640px', margin: '0 auto', paddingBottom: '40px' }}>
+        <div className="medical-card" style={{ padding: '40px', textAlign: 'center', borderRadius: '24px', border: '1px solid #cbd5e1', boxShadow: 'var(--shadow-lg)' }}>
+          <div style={{ width: '80px', height: '80px', background: 'var(--primary-50)', color: 'var(--primary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px auto', fontSize: '2.5rem' }}>
+            🌱
+          </div>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', marginBottom: '12px' }}>
+            Start Your Wellness Check
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '32px', maxWidth: '480px', margin: '0 auto 32px auto' }}>
+            Answer a few simple lifestyle questions. You don’t need medical reports to begin.
+          </p>
+          
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '1.2rem', marginTop: '-2px' }}>⏱️</span>
+              <div>
+                <strong style={{ fontSize: '0.9rem', color: '#0f172a', display: 'block' }}>Takes around 2–3 minutes</strong>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Quick and straightforward lifestyle reflection.</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '1.2rem', marginTop: '-2px' }}>🩺</span>
+              <div>
+                <strong style={{ fontSize: '0.9rem', color: '#0f172a', display: 'block' }}>Advanced health metrics are optional</strong>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Skip questions about blood pressure or glucose if you don't know them.</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '1.2rem', marginTop: '-2px' }}>🌿</span>
+              <div>
+                <strong style={{ fontSize: '0.9rem', color: '#0f172a', display: 'block' }}>Get wellness insights and next steps</strong>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Unlock daily actions and general wellness guidance tailored for you.</span>
+              </div>
+            </div>
+          </div>
 
-  const renderStep0 = () => (
-    <div className="animate-fade-in">
-      <SectionTitle
-        icon={<FiUser size={18} color="var(--primary)" />}
-        title="Basic Details"
-        subtitle="These help us personalise your wellness estimate."
-      />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-        {/* Age */}
-        <div>
-          <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Age *</label>
-          <input
-            id="hcf-age" type="number" className="input-field" placeholder="e.g. 28"
-            value={age} min="1" max="120"
-            onChange={e => setAge(e.target.value)}
-          />
-        </div>
-        {/* Gender */}
-        <div>
-          <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Gender *</label>
-          <select id="hcf-gender" className="select-field" value={gender} onChange={e => setGender(e.target.value)}>
-            <option value="">Select gender</option>
-            {GENDER_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-        </div>
-        {/* Height */}
-        <div>
-          <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Height (cm) *</label>
-          <input
-            id="hcf-height" type="number" className="input-field" placeholder="e.g. 165"
-            value={height} min="50" max="300"
-            onChange={e => setHeight(e.target.value)}
-          />
-        </div>
-        {/* Weight */}
-        <div>
-          <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Weight (kg) *</label>
-          <input
-            id="hcf-weight" type="number" className="input-field" placeholder="e.g. 65"
-            value={weight} min="10" max="300"
-            onChange={e => setWeight(e.target.value)}
-          />
+          <button 
+            onClick={() => setStarted(true)} 
+            className="btn-primary" 
+            style={{ width: '100%', padding: '14px', fontSize: '1rem', fontWeight: 800, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
+          >
+            Start Check <FiChevronRight size={18} />
+          </button>
         </div>
       </div>
+    );
+  }
 
-      {/* BMI Auto-calculation display */}
+  // Submit Loading Overlay (Supportive and clinician-free microcopy)
+  if (loading) {
+    return (
       <div style={{
-        marginTop: '20px', padding: '14px 18px', borderRadius: 'var(--radius-md)',
-        background: bmi ? 'var(--primary-50)' : '#f8fafc',
-        border: `1px solid ${bmi ? 'rgba(13,110,91,0.2)' : 'var(--border-light)'}`,
-        display: 'flex', alignItems: 'center', gap: '12px',
-      }}>
-        <span style={{ fontSize: '1.3rem' }}>📐</span>
-        <div>
-          {bmi ? (
-            <>
-              <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.95rem' }}>Your BMI: {bmi} </span>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{bmiCategory(bmi)}</span>
-            </>
-          ) : (
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-              Don't know your BMI? No problem — VitalIQ calculates it automatically from your height and weight.
-            </span>
-          )}
+        minHeight: '60vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'white',
+        borderRadius: '24px',
+        padding: '40px',
+        textAlign: 'center',
+        gap: '20px'
+      }} className="page-enter">
+        <div className="spinner" style={{ width: '60px', height: '60px', borderWidth: '5px' }} />
+        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: '12px 0 4px 0' }}>
+          Creating your wellness estimate...
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '360px', lineHeight: 1.5, margin: 0 }}>
+          Checking your routine, habits, and optional metrics.
+        </p>
+      </div>
+    );
+  }
+
+  // ── Step Renderers ──────────────────────────────────────────────────────────
+
+  // Step 1: Basic Details
+  const renderStep0 = () => {
+    return (
+      <div className="animate-fade-in">
+        <SectionTitle
+          icon={<FiUser size={18} color="var(--primary)" />}
+          title="Basic Details"
+          subtitle="These metrics let us personalise your wellness estimate."
+        />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+          {/* Age */}
+          <div>
+            <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 700 }}>Age *</label>
+            <input
+              id="hcf-age" type="number" className="input-field" placeholder="e.g. 28"
+              value={age} min="1" max="120"
+              onChange={e => setAge(e.target.value)}
+            />
+            {!age ? (
+              <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                Please enter your age to continue
+              </span>
+            ) : getValidationError('age') ? (
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent-coral)', display: 'block', marginTop: '4px', fontWeight: 600 }}>
+                ⚠️ {getValidationError('age')}
+              </span>
+            ) : null}
+          </div>
+          
+          {/* Gender */}
+          <div>
+            <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 700 }}>Gender *</label>
+            <select id="hcf-gender" className="select-field" value={gender} onChange={e => setGender(e.target.value)}>
+              <option value="">Select gender</option>
+              {GENDER_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+            {!gender && (
+              <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                Please select your gender
+              </span>
+            )}
+          </div>
+
+          {/* Height */}
+          <div>
+            <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 700 }}>Height (cm) *</label>
+            <input
+              id="hcf-height" type="number" className="input-field" placeholder="e.g. 165"
+              value={height} min="50" max="300"
+              onChange={e => setHeight(e.target.value)}
+            />
+            {!height ? (
+              <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                Please enter your height in cm
+              </span>
+            ) : getValidationError('height') ? (
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent-coral)', display: 'block', marginTop: '4px', fontWeight: 600 }}>
+                ⚠️ {getValidationError('height')}
+              </span>
+            ) : null}
+          </div>
+
+          {/* Weight */}
+          <div>
+            <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 700 }}>Weight (kg) *</label>
+            <input
+              id="hcf-weight" type="number" className="input-field" placeholder="e.g. 65"
+              value={weight} min="10" max="300"
+              onChange={e => setWeight(e.target.value)}
+            />
+            {!weight ? (
+              <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                Please enter your weight in kg
+              </span>
+            ) : getValidationError('weight') ? (
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent-coral)', display: 'block', marginTop: '4px', fontWeight: 600 }}>
+                ⚠️ {getValidationError('weight')}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        {/* BMI Helper Display */}
+        <div style={{
+          marginTop: '24px', padding: '16px 20px', borderRadius: 'var(--radius-md)',
+          background: bmi ? 'var(--primary-50)' : '#f8fafc',
+          border: `1px solid ${bmi ? 'rgba(13,110,91,0.2)' : 'var(--border-light)'}`,
+          display: 'flex', alignItems: 'center', gap: '12px',
+        }}>
+          <span style={{ fontSize: '1.4rem' }}>📐</span>
+          <div>
+            {bmi ? (
+              <>
+                <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.95rem' }}>Your BMI: {bmi} </span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600 }}>{bmiCategory(bmi)}</span>
+              </>
+            ) : (
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>
+                We calculate BMI automatically, so you don’t need to know it. Just provide height and weight.
+              </span>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
+  // Step 2: Daily Routine
   const renderStep1 = () => (
     <div className="animate-fade-in">
       <SectionTitle
         icon={<FiActivity size={18} color="var(--primary)" />}
-        title="Daily Lifestyle"
-        subtitle="Choose the option that best describes a typical day for you. No exact numbers needed!"
+        title="Your Daily Routine"
+        subtitle="Help us understand your day. Choose options that best fit your lifestyle."
       />
 
       <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '10px' }}>
+        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px' }}>
           How active are you on a typical day? *
         </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {ACTIVITY_OPTIONS.map(opt => (
             <OptionCard key={opt.label} option={opt} selected={activityOption?.label === opt.label} onSelect={setActivityOption} />
           ))}
@@ -421,10 +566,10 @@ const HealthCheckForm = () => {
       </div>
 
       <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '10px' }}>
-          How much screen time do you get per day (phone, TV, computer)? *
+        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px' }}>
+          How much screen time do you usually have? *
         </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {SCREEN_OPTIONS.map(opt => (
             <OptionCard key={opt.label} option={opt} selected={screenOption?.label === opt.label} onSelect={setScreenOption} />
           ))}
@@ -432,10 +577,10 @@ const HealthCheckForm = () => {
       </div>
 
       <div>
-        <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '10px' }}>
-          How many hours do you typically work or study per day? *
+        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px' }}>
+          How many hours do you usually work or study? *
         </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {WORK_OPTIONS.map(opt => (
             <OptionCard key={opt.label} option={opt} selected={workOption?.label === opt.label} onSelect={setWorkOption} />
           ))}
@@ -444,19 +589,20 @@ const HealthCheckForm = () => {
     </div>
   );
 
+  // Step 3: Sleep & Stress
   const renderStep2 = () => (
     <div className="animate-fade-in">
       <SectionTitle
         icon={<FiMoon size={18} color="var(--primary)" />}
         title="Sleep & Stress"
-        subtitle="Your sleep and stress patterns significantly affect your overall wellness."
+        subtitle="Hydration, stress levels, and restorative sleep play a massive role in routine energy."
       />
 
       <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '10px' }}>
-          How much sleep do you typically get per night? *
+        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px' }}>
+          How many hours do you usually sleep? *
         </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {SLEEP_OPTIONS.map(opt => (
             <OptionCard key={opt.label} option={opt} selected={sleepOption?.label === opt.label} onSelect={setSleepOption} />
           ))}
@@ -464,10 +610,10 @@ const HealthCheckForm = () => {
       </div>
 
       <div>
-        <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '10px' }}>
-          How would you describe your usual stress level? *
+        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px' }}>
+          How stressed do you usually feel? *
         </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {STRESS_OPTIONS.map(opt => (
             <OptionCard key={opt.label} option={opt} selected={stressOption?.label === opt.label} onSelect={setStressOption} />
           ))}
@@ -476,57 +622,73 @@ const HealthCheckForm = () => {
     </div>
   );
 
+  // Step 4: Optional Health Metrics
   const renderStep3 = () => (
     <div className="animate-fade-in">
       <SectionTitle
         icon={<FiHeart size={18} color="var(--primary)" />}
         title="Optional Health Metrics"
-        subtitle="You can skip this entire section — your basic wellness estimate doesn't need it."
+        subtitle="Provide advanced metrics if you know them. You can skip this step entirely."
       />
 
-      {/* Advanced metrics toggle */}
-      <div style={{
-        padding: '16px 20px', marginBottom: '24px', borderRadius: 'var(--radius-md)',
-        background: showAdvanced ? 'var(--primary-50)' : '#f8fafc',
-        border: `1px solid ${showAdvanced ? 'rgba(13,110,91,0.25)' : 'var(--border-light)'}`,
-        cursor: 'pointer', transition: 'all var(--transition-base)',
-      }} onClick={() => setShowAdvanced(v => !v)}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '44px', height: '24px', borderRadius: '12px',
-              background: showAdvanced ? 'var(--primary)' : '#cbd5e1',
-              position: 'relative', transition: 'background var(--transition-base)', flexShrink: 0,
-            }}>
-              <div style={{
-                width: '18px', height: '18px', borderRadius: '50%', background: 'white',
-                position: 'absolute', top: '3px',
-                left: showAdvanced ? '23px' : '3px',
-                transition: 'left var(--transition-base)',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
-              }} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: showAdvanced ? 'var(--primary)' : 'var(--text-primary)' }}>
-                I know some of my recent health numbers
-              </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Blood pressure, blood glucose, smoking, family history
-              </div>
-            </div>
-          </div>
-          <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 600, marginLeft: '16px' }}>
-            {showAdvanced ? 'Hide' : 'Add metrics →'}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <button 
+          type="button"
+          onClick={() => {
+            setShowAdvanced(false);
+            setCurrentStep(4); // Advance immediately to Step 5: Symptoms & Review
+            toast.success("Moving to symptoms & review! 🌿");
+          }}
+          style={{
+            padding: '24px 20px',
+            borderRadius: 'var(--radius-lg)',
+            border: `2.5px solid ${!showAdvanced ? '#e2e8f0' : '#e2e8f0'}`,
+            background: 'white',
+            cursor: 'pointer',
+            transition: 'all 0.25s',
+            textAlign: 'center',
+            boxShadow: 'var(--shadow-sm)'
+          }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+        >
+          <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🌿</div>
+          <strong style={{ fontSize: '1rem', color: '#0f172a', display: 'block', marginBottom: '6px' }}>Skip this step</strong>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4, display: 'block' }}>
+            Generate lifestyle wellness estimate only.
           </span>
-        </div>
+        </button>
+
+        <button 
+          type="button"
+          onClick={() => {
+            setShowAdvanced(true);
+          }}
+          style={{
+            padding: '24px 20px',
+            borderRadius: 'var(--radius-lg)',
+            border: `2.5px solid ${showAdvanced ? 'var(--primary)' : '#e2e8f0'}`,
+            background: showAdvanced ? 'var(--primary-50)' : 'white',
+            cursor: 'pointer',
+            transition: 'all 0.25s',
+            textAlign: 'center',
+            boxShadow: showAdvanced ? 'var(--shadow-md)' : 'var(--shadow-sm)'
+          }}
+        >
+          <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📊</div>
+          <strong style={{ fontSize: '1rem', color: showAdvanced ? 'var(--primary)' : '#0f172a', display: 'block', marginBottom: '6px' }}>I know some health metrics</strong>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4, display: 'block' }}>
+            Provide BP, blood glucose, family history, etc.
+          </span>
+        </button>
       </div>
 
       {showAdvanced && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '28px', borderTop: '1px solid #e2e8f0', paddingTop: '24px', marginTop: '20px' }}>
 
           {/* Blood Pressure */}
           <div>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '10px' }}>
+            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px' }}>
               Blood pressure — which best describes you?
             </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -553,7 +715,7 @@ const HealthCheckForm = () => {
                   />
                 </div>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', gridColumn: '1/-1', margin: 0 }}>
-                  Normal: 120/80 mmHg · Elevated: 130–139/80–89 · High: 140+/90+
+                  Normal: 120/80 mmHg · High: 140+/90+
                 </p>
               </div>
             )}
@@ -561,7 +723,7 @@ const HealthCheckForm = () => {
 
           {/* Glucose */}
           <div>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '10px' }}>
+            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px' }}>
               Blood glucose / blood sugar level
             </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -578,7 +740,7 @@ const HealthCheckForm = () => {
                   onChange={e => setGlucoseValue(e.target.value)}
                 />
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Normal fasting: 70–100 mg/dL · Pre-diabetic: 100–125 · Diabetic: 126+
+                  Normal fasting: 70–100 mg/dL · Diabetic: 126+
                 </p>
               </div>
             )}
@@ -586,7 +748,7 @@ const HealthCheckForm = () => {
 
           {/* Family History */}
           <div>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '10px' }}>
+            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '10px' }}>
               Family history of diabetes or heart disease?
             </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -603,14 +765,14 @@ const HealthCheckForm = () => {
               { label: 'Do you drink alcohol?',value: alcohol, setter: setAlcohol },
             ].map(({ label, value, setter }) => (
               <div key={label}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '8px' }}>{label}</label>
+                <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '8px' }}>{label}</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {[{ text: 'Yes', v: true }, { text: 'No', v: false }].map(({ text, v }) => (
                     <button key={text} type="button" onClick={() => setter(v)} style={{
                       flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)',
                       border: `2px solid ${value === v ? 'var(--primary)' : 'var(--border-light)'}`,
                       background: value === v ? 'var(--primary-50)' : 'white',
-                      fontWeight: 600, fontSize: '0.88rem',
+                      fontWeight: 700, fontSize: '0.88rem',
                       color: value === v ? 'var(--primary)' : 'var(--text-secondary)',
                       cursor: 'pointer',
                     }}>
@@ -624,7 +786,7 @@ const HealthCheckForm = () => {
 
           {/* Existing Conditions */}
           <div>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '6px' }}>
+            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '6px' }}>
               Any existing health conditions? <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Optional)</span>
             </label>
             <input
@@ -639,20 +801,24 @@ const HealthCheckForm = () => {
         </div>
       )}
 
-      {/* "Skip" notice when advanced is off */}
+      {/* Skip indicator notice */}
       {!showAdvanced && (
         <div style={{
           padding: '14px 18px', borderRadius: 'var(--radius-md)',
           background: '#f0fdf4', border: '1px solid #bbf7d0',
-          fontSize: '0.85rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '10px',
+          fontSize: '0.82rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '10px',
+          marginTop: '20px'
         }}>
-          <span style={{ fontSize: '1.1rem' }}>🌿</span>
-          <span>Your wellness estimate will be based on your lifestyle inputs from the previous steps. Toggle on above to include health numbers for a more detailed estimate.</span>
+          <span style={{ fontSize: '1.2rem' }}>🌿</span>
+          <span style={{ lineHeight: 1.4 }}>
+            Wellness estimate will be based on your lifestyle inputs from previous steps. Safe, quick, and no medical data required.
+          </span>
         </div>
       )}
     </div>
   );
 
+  // Step 5: Symptoms & Review
   const renderStep4 = () => {
     const reviewItems = [
       { label: 'Age',            value: `${age} years` },
@@ -663,7 +829,7 @@ const HealthCheckForm = () => {
       { label: 'Activity level', value: activityOption?.label || '—' },
       { label: 'Screen time',    value: screenOption?.label  || '—' },
       { label: 'Work/study hrs', value: workOption?.label    || '—' },
-      { label: 'Sleep',          value: sleepOption?.label   || '—' },
+      { label: 'Sleep hours',    value: sleepOption?.label   || '—' },
       { label: 'Stress level',   value: stressOption?.label  || '—' },
       ...(showAdvanced ? [
         { label: 'Blood pressure',  value: bpOption?.value === 'Exact' ? `${systolic || '—'}/${diastolic || '—'} mmHg` : (bpOption?.label || 'Not provided') },
@@ -673,7 +839,7 @@ const HealthCheckForm = () => {
         { label: 'Alcohol',         value: alcohol  === true ? 'Yes' : alcohol  === false ? 'No' : 'Not provided' },
         ...(existingConditions.trim() ? [{ label: 'Existing conditions', value: existingConditions.trim() }] : []),
       ] : [
-        { label: 'Health metrics',  value: 'Skipped — lifestyle-only estimate' },
+        { label: 'Advanced Metrics', value: 'Skipped — Lifestyle-only estimate' },
       ]),
       { label: 'Symptoms noted', value: symptoms.includes('none') || symptoms.length === 0 ? 'None' : `${symptoms.length} selected` },
     ];
@@ -683,19 +849,16 @@ const HealthCheckForm = () => {
         <SectionTitle
           icon={<FiEye size={18} color="var(--primary)" />}
           title="Symptoms & Review"
-          subtitle="Select any recent symptoms, then review your answers before running the wellness check."
+          subtitle="Select any recent symptoms, and verify your answers before calculating your wellness estimate."
         />
 
-        {/* Symptoms */}
+        {/* Symptoms Checklist */}
         <div style={{ marginBottom: '28px' }}>
-          <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '6px' }}>
-            Are you experiencing any of these recently?{' '}
-            <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Select all that apply)</span>
+          <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '6px' }}>
+            Anything you noticed recently? <span style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>(Select all that apply)</span>
           </label>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-            For informational context only — not for diagnosis.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
             {SYMPTOM_OPTIONS.map(opt => {
               const checked = symptoms.includes(opt.id);
               return (
@@ -704,7 +867,7 @@ const HealthCheckForm = () => {
                   padding: '12px 14px', borderRadius: 'var(--radius-md)',
                   border: `1.5px solid ${checked ? (opt.serious ? '#f97316' : 'var(--primary)') : 'var(--border-light)'}`,
                   background: checked ? (opt.serious ? '#fff7ed' : 'var(--primary-50)') : 'white',
-                  cursor: 'pointer', transition: 'all var(--transition-fast)',
+                  cursor: 'pointer', transition: 'all 0.2s',
                 }}>
                   <div style={{
                     width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0,
@@ -714,60 +877,47 @@ const HealthCheckForm = () => {
                   }}>
                     {checked && <FiCheck size={10} color="white" />}
                   </div>
-                  <span style={{ fontSize: '0.88rem', fontWeight: 500, color: 'var(--text-primary)', flex: 1 }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>
                     {opt.label}
                   </span>
-                  {opt.serious && <span style={{ fontSize: '0.75rem', color: '#f97316', fontWeight: 600 }}>⚠ Urgent</span>}
+                  {opt.serious && <span style={{ fontSize: '0.72rem', color: '#f97316', fontWeight: 700 }}>⚠ Urgent notice</span>}
                 </button>
               );
             })}
           </div>
 
-          {/* Serious symptom warning */}
+          {/* Urgent Symptom Warning Block */}
           {hasSerious && (
             <div style={{
-              marginTop: '16px', padding: '14px 16px', borderRadius: 'var(--radius-md)',
+              marginTop: '16px', padding: '14px 18px', borderRadius: 'var(--radius-md)',
               background: '#fff7ed', border: '1px solid #fdba74',
               display: 'flex', gap: '10px', alignItems: 'flex-start',
             }}>
               <FiAlertTriangle size={18} color="#f97316" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <p style={{ fontSize: '0.85rem', color: '#9a3412', lineHeight: 1.6 }}>
-                <strong>Please note:</strong> If your symptoms are severe, sudden, or worsening — such as chest discomfort or recurring dizziness — please contact a qualified healthcare professional promptly. VitalIQ Health is not a substitute for medical advice.
+              <p style={{ fontSize: '0.82rem', color: '#9a3412', lineHeight: 1.5, margin: 0 }}>
+                <strong>Safety recommendation:</strong> If symptoms are severe or urgent (such as sudden chest discomfort or recurring dizziness), please contact a qualified healthcare professional promptly. VitalIQ is not a substitute for clinical attention.
               </p>
             </div>
           )}
         </div>
 
-        {/* Review summary */}
-        <div style={{ marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-secondary)' }}>
+        {/* Review Summary */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '12px', color: 'var(--text-secondary)', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
             Review Your Answers
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
             {reviewItems.map(item => <ReviewRow key={item.label} label={item.label} value={item.value} />)}
           </div>
         </div>
 
-        {/* Estimate type banner */}
-        <div style={{
-          padding: '14px 18px', marginBottom: '20px', borderRadius: 'var(--radius-md)',
-          background: showAdvanced ? '#f0f9ff' : 'var(--primary-50)',
-          border: `1px solid ${showAdvanced ? '#bae6fd' : 'rgba(13,110,91,0.2)'}`,
-          fontSize: '0.85rem', color: showAdvanced ? '#0369a1' : 'var(--primary)',
-          lineHeight: 1.6,
-        }}>
-          {showAdvanced
-            ? '📊 Your estimate will include the optional health metrics you provided.'
-            : '🌿 Your estimate will be based on lifestyle inputs. Enable optional health metrics on the previous step for a more detailed estimate.'}
-        </div>
-
         {/* Disclaimer */}
-        <div className="disclaimer-box">
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-            <FiAlertTriangle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-            <span>
+        <div className="disclaimer-box" style={{ background: '#f8fafc', borderLeft: '4px solid var(--primary)', borderRadius: '8px', padding: '16px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', color: 'var(--text-secondary)' }}>
+            <FiShield size={18} style={{ flexShrink: 0, color: 'var(--primary)', marginTop: '2px' }} />
+            <span style={{ fontSize: '0.78rem', lineHeight: 1.4 }}>
               <strong>Wellness disclaimer: </strong>
-              VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.
+              VitalIQ Health provides wellness insights and general lifestyle estimates only. It does not provide medical diagnosis, disease prediction, treatment, or cure. Consult a qualified professional for medical concerns.
             </span>
           </div>
         </div>
@@ -778,89 +928,127 @@ const HealthCheckForm = () => {
   const stepRenderers = [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4];
 
   return (
-    <div className="page-enter">
+    <div className="page-enter" style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '40px' }}>
+      
       {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: '6px' }}>
-          Wellness Screening
+      <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <h1 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '6px', color: '#0f172a' }}>
+          Wellness Screening Check
         </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          A friendly lifestyle-based wellness check — no medical expertise required
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
+          Guided lifestyle wellness check — complete in 2–3 minutes
         </p>
       </div>
 
-      {/* Step Indicator */}
-      <div className="step-indicator" style={{ marginBottom: '36px', overflowX: 'auto', paddingBottom: '8px' }}>
-        {STEPS.map((step, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div className={`step-circle ${i < currentStep ? 'completed' : i === currentStep ? 'active' : 'inactive'}`}>
-                {i < currentStep ? <FiCheck size={15} /> : (i + 1)}
+      {/* Progress Indicator (Responsive) */}
+      <div className="step-indicator-wrapper" style={{ marginBottom: '32px' }}>
+        {/* Desktop Step Labels */}
+        <div className="desktop-indicator" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '760px', margin: '0 auto' }}>
+          {STEPS.map((step, i) => {
+            const isCompleted = i < currentStep;
+            const isActive = i === currentStep;
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', flex: i < STEPS.length - 1 ? 1 : 'none' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                  <div className={`step-circle ${isCompleted ? 'completed' : isActive ? 'active' : 'inactive'}`} style={{
+                    width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: isCompleted || isActive ? 'var(--primary)' : '#e2e8f0',
+                    color: isCompleted || isActive ? 'white' : '#64748b',
+                    fontWeight: 700, fontSize: '0.85rem', boxShadow: isActive ? '0 0 0 4px rgba(13, 148, 136, 0.2)' : 'none',
+                    transition: 'all 0.2s'
+                  }}>
+                    {isCompleted ? <FiCheck size={14} /> : (i + 1)}
+                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: isActive || isCompleted ? 700 : 500, color: isActive ? 'var(--primary)' : '#64748b' }}>
+                    {step.label}
+                  </span>
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div style={{ flex: 1, height: '2px', background: isCompleted ? 'var(--primary)' : '#cbd5e1', margin: '0 12px', marginBottom: '18px', transition: 'background 0.3s' }} />
+                )}
               </div>
-              <p style={{
-                fontSize: '0.65rem', fontWeight: 600, marginTop: '5px', whiteSpace: 'nowrap',
-                color: i <= currentStep ? 'var(--primary)' : 'var(--text-muted)',
-              }}>
-                {step.label}
-              </p>
-            </div>
-            {i < STEPS.length - 1 && (
-              <div className={`step-line ${i < currentStep ? 'active' : ''}`} style={{ margin: '0 4px', marginBottom: '18px', minWidth: '40px' }} />
-            )}
+            );
+          })}
+        </div>
+
+        {/* Mobile Compact Progress Bar */}
+        <div className="mobile-indicator" style={{ display: 'none', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+            <span>Step {currentStep + 1} of 5</span>
+            <span style={{ color: 'var(--primary)' }}>{STEPS[currentStep]?.label}</span>
           </div>
-        ))}
+          <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+            <div style={{ width: `${((currentStep + 1) / 5) * 100}%`, height: '100%', background: 'var(--primary)', transition: 'width 0.3s ease' }} />
+          </div>
+        </div>
       </div>
 
-      {/* Step Content */}
-      <div className="medical-card hcf-card animate-fade-in" style={{ padding: '32px', maxWidth: '760px', margin: '0 auto' }}>
+      {/* Step Form Box */}
+      <div className="medical-card hcf-card animate-fade-in" style={{ padding: '36px', maxWidth: '760px', margin: '0 auto', boxShadow: 'var(--shadow-md)' }}>
         {stepRenderers[currentStep]?.()}
       </div>
 
-      {/* Navigation Buttons */}
+      {/* Navigation Buttons (Back & Next) */}
       <div className="hcf-btn-container" style={{ display: 'flex', justifyContent: 'space-between', maxWidth: '760px', margin: '24px auto 0', gap: '16px' }}>
         <button
-          className="btn-ghost" onClick={prevStep} disabled={currentStep === 0}
-          style={{ opacity: currentStep === 0 ? 0.4 : 1, padding: '12px 28px' }}
+          className="btn-ghost" 
+          onClick={prevStep} 
+          disabled={currentStep === 0}
+          style={{ opacity: currentStep === 0 ? 0.3 : 1, padding: '12px 24px', fontWeight: 700, cursor: currentStep === 0 ? 'not-allowed' : 'pointer' }}
         >
           <FiChevronLeft size={18} /> Back
         </button>
 
         {currentStep < STEPS.length - 1 ? (
-          <button id="hcf-next" className="btn-primary" onClick={nextStep} style={{ padding: '12px 32px' }}>
+          <button 
+            id="hcf-next" 
+            className="btn-primary" 
+            onClick={nextStep} 
+            disabled={!canProceed()}
+            style={{ 
+              padding: '12px 28px', 
+              fontWeight: 700, 
+              opacity: !canProceed() ? 0.5 : 1, 
+              cursor: !canProceed() ? 'not-allowed' : 'pointer' 
+            }}
+          >
             Continue <FiChevronRight size={18} />
           </button>
         ) : (
-          <button id="hcf-submit" className="btn-primary" onClick={handleSubmit} disabled={loading} style={{ padding: '12px 32px' }}>
-            {loading ? (
-              <span className="spinner" style={{ width: '18px', height: '18px', borderWidth: '2px' }} />
-            ) : (
-              <>Run Wellness Check <FiSend size={16} /></>
-            )}
+          <button 
+            id="hcf-submit" 
+            className="btn-primary" 
+            onClick={handleSubmit} 
+            disabled={loading} 
+            style={{ padding: '12px 28px', fontWeight: 800 }}
+          >
+            Get My Wellness Estimate <FiSend size={16} />
           </button>
         )}
       </div>
 
       <style>{`
+        .desktop-indicator {
+          display: flex;
+        }
+        .mobile-indicator {
+          display: none;
+        }
+
         @media (max-width: 600px) {
+          .desktop-indicator {
+            display: none !important;
+          }
+          .mobile-indicator {
+            display: flex !important;
+          }
           .hcf-card {
-            padding: 20px 16px !important;
-            border-radius: 12px !important;
+            padding: 24px 16px !important;
+            border-radius: 16px !important;
           }
           .hcf-btn-container {
             margin-top: 16px !important;
             padding: 0 4px !important;
-          }
-          .step-indicator {
-            margin-bottom: 24px !important;
-          }
-          .step-line {
-            min-width: 15px !important;
-            width: 25px !important;
-          }
-          .step-circle {
-            width: 30px !important;
-            height: 30px !important;
-            font-size: 0.75rem !important;
           }
         }
       `}</style>
@@ -869,4 +1057,3 @@ const HealthCheckForm = () => {
 };
 
 export default HealthCheckForm;
-
