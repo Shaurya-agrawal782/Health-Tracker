@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiTrendingUp, FiAward, FiUsers, FiStar, FiShield } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
+import EmptyState from '../components/common/EmptyState';
 
 const Leaderboard = () => {
   const { user } = useAuth();
@@ -117,32 +118,42 @@ const Leaderboard = () => {
 
         {/* Sidebar: Your Stats */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div className="medical-card" style={{ 
-            padding: '32px', 
-            background: 'linear-gradient(135deg, #0d9488 0%, #10b981 100%)',
-            color: 'white',
-            textAlign: 'center'
-          }}>
-            <FiAward size={48} style={{ marginBottom: '16px' }} />
-            <h3 style={{ fontSize: '1.4rem', fontWeight: 900, marginBottom: '8px' }}>
-              Position #{leaders.find(l => l.isUser)?.position || 'N/A'}
-            </h3>
-            <p style={{ opacity: 0.9, fontSize: '0.9rem', marginBottom: '24px' }}>
-              {leaders.find(l => l.isUser)?.position <= 3 ? 
-                "Incredible! You're among the top wellness leaders." : 
-                "Keep logging your health data to maintain your wellness consistency!"}
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-              <div style={{ padding: '12px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', flex: 1 }}>
-                <div style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>Wellness Points</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{user?.points || 0}</div>
-              </div>
-              <div style={{ padding: '12px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', flex: 1 }}>
-                <div style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>Streak</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{user?.currentStreak || 0}</div>
+          {!user || !user.currentStreak || user.currentStreak === 0 ? (
+            <EmptyState
+              title="Build your first streak"
+              description="Complete daily actions or habits to start a wellness streak."
+              icon="🏆"
+              primaryActionLabel="Start Daily Actions"
+              primaryActionTo="/daily-actions"
+            />
+          ) : (
+            <div className="medical-card" style={{ 
+              padding: '32px', 
+              background: 'linear-gradient(135deg, #0d9488 0%, #10b981 100%)',
+              color: 'white',
+              textAlign: 'center'
+            }}>
+              <FiAward size={48} style={{ marginBottom: '16px' }} />
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 900, marginBottom: '8px' }}>
+                Position #{leaders.find(l => l.isUser)?.position || 'N/A'}
+              </h3>
+              <p style={{ opacity: 0.9, fontSize: '0.9rem', marginBottom: '24px' }}>
+                {leaders.find(l => l.isUser)?.position <= 3 ? 
+                  "Incredible! You're among the top wellness leaders." : 
+                  "Keep logging your health data to maintain your wellness consistency!"}
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', flex: 1 }}>
+                  <div style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>Wellness Points</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{user?.points || 0}</div>
+                </div>
+                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', flex: 1 }}>
+                  <div style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>Streak</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{user?.currentStreak || 0}</div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="medical-card" style={{ padding: '24px' }}>
             <h4 style={{ fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -86,7 +86,7 @@ const Landing = () => {
       }} />
 
       {/* ══════════════════════════ NAVBAR ══════════════════════════ */}
-      <nav style={{
+      <nav className="landing-nav" style={{
         padding: '20px 60px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         position: 'sticky', top: 0, zIndex: 100,
         background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)',
@@ -107,7 +107,7 @@ const Landing = () => {
         </div>
 
         {/* Nav links (anchor-scroll) */}
-        <div style={{ display: 'flex', gap: '36px', alignItems: 'center' }}>
+        <div className="landing-nav-links" style={{ display: 'flex', gap: '36px', alignItems: 'center' }}>
           {['Features', 'How it Works', 'For You'].map(lbl => (
             <a key={lbl} href={`#${lbl.toLowerCase().replace(/ /g, '-')}`} style={{
               color: '#475569', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem',
@@ -122,7 +122,7 @@ const Landing = () => {
         </div>
 
         {/* Auth buttons */}
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div className="landing-nav-auth" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <Link to="/login" style={{ color: '#334155', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>
             Login
           </Link>
@@ -142,9 +142,9 @@ const Landing = () => {
       </nav>
 
       {/* ══════════════════════════ HERO ══════════════════════════ */}
-      <main style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 40px', position: 'relative', zIndex: 10 }}>
+      <main className="landing-main" style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 40px', position: 'relative', zIndex: 10 }}>
 
-        <section style={{ padding: '100px 0 80px', textAlign: 'center' }}>
+        <section className="landing-hero-sec" style={{ padding: '100px 0 80px', textAlign: 'center' }}>
           {/* Pill badge */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '8px',
@@ -335,7 +335,7 @@ const Landing = () => {
         </section>
 
         {/* ══════════════════════════ FINAL CTA ══════════════════════════ */}
-        <section style={{
+        <section className="landing-cta-sec" style={{
           margin: '0 0 80px', padding: '60px 40px', borderRadius: '28px',
           background: 'linear-gradient(135deg, #064e3b 0%, #0d9488 50%, #10b981 100%)',
           textAlign: 'center', position: 'relative', overflow: 'hidden'
@@ -401,6 +401,42 @@ const Landing = () => {
           © 2026 VitalIQ Health. All rights reserved.
         </p>
       </footer>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .landing-nav {
+            padding: 12px 16px !important;
+          }
+          .landing-nav-links {
+            display: none !important;
+          }
+          .landing-main {
+            padding: 0 16px !important;
+          }
+          .landing-hero-sec {
+            padding: 48px 0 32px !important;
+          }
+          .landing-hero-sec h1 {
+            font-size: 1.8rem !important;
+            letter-spacing: -1px !important;
+          }
+          .landing-hero-sec p {
+            font-size: 0.95rem !important;
+            margin-bottom: 24px !important;
+          }
+          .landing-cta-sec {
+            padding: 32px 16px !important;
+            margin-bottom: 40px !important;
+          }
+          .landing-cta-sec h2 {
+            font-size: 1.45rem !important;
+          }
+          .landing-cta-sec p {
+            font-size: 0.88rem !important;
+            margin-bottom: 20px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

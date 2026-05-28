@@ -111,9 +111,11 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  const updatePreferencesState = (preferencesData) => {
+  const updatePreferencesState = (preferencesData, updatedName) => {
+    const nameToUpdate = updatedName || preferencesData?.displayName || user?.name || 'User';
     const updatedUser = {
       ...user,
+      name: nameToUpdate,
       preferences: {
         ...(user?.preferences || {}),
         ...preferencesData

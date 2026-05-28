@@ -18,7 +18,8 @@ const getEstimateLabel = (source, aiGenerated) => {
 const hasModelConfidence = (risk) => (
   risk?.source === 'ml_model' &&
   typeof risk.confidence === 'number' &&
-  Number.isFinite(risk.confidence)
+  Number.isFinite(risk.confidence) &&
+  risk.confidenceLabel === 'Model confidence'
 );
 
 const Insights = () => {
@@ -48,11 +49,41 @@ const Insights = () => {
           // Use prediction-based risk (from the screening form)
           const source = pred.overallRisk.source || pred.source || (pred.aiGenerated ? 'ai_assisted' : null);
           const confidence = typeof pred.overallRisk.confidence === 'number' ? pred.overallRisk.confidence : null;
+
+          const getFallbackCompleteness = (input) => {
+            if (!input) return 60;
+            const providedGlucose = (input.glucose !== undefined && input.glucose !== null && input.glucose !== '');
+            const providedBP = (input.bloodPressure !== undefined && input.bloodPressure !== null && input.bloodPressure !== '') ||
+                               (input.systolic !== undefined && input.systolic !== null && input.systolic !== '' &&
+                                input.diastolic !== undefined && input.diastolic !== null && input.diastolic !== '');
+            const providedFamily = (input.familyHistory !== undefined && input.familyHistory !== null && input.familyHistory !== '') ||
+                                   (input.family !== undefined && input.family !== null && input.family !== '');
+            const providedSmoking = (input.smoking !== undefined && input.smoking !== null && input.smoking !== '');
+            const providedAlcohol = (input.alcohol !== undefined && input.alcohol !== null && input.alcohol !== '');
+
+            const providedCount = [
+              providedGlucose,
+              providedBP,
+              providedFamily,
+              providedSmoking,
+              providedAlcohol
+            ].filter(Boolean).length;
+
+            return Math.round((providedCount / 5) * 100);
+          };
+
+          const completenessVal = typeof pred.overallRisk.inputCompleteness === 'number'
+            ? pred.overallRisk.inputCompleteness
+            : (typeof pred.inputCompleteness === 'number'
+              ? pred.inputCompleteness
+              : getFallbackCompleteness(pred.input));
+
           const predRisk = {
             level: pred.overallRisk.level,
             score: pred.overallRisk.score,
             confidence,
             confidenceLabel: pred.overallRisk.confidenceLabel || pred.confidenceLabel || getEstimateLabel(source, pred.aiGenerated),
+            inputCompleteness: completenessVal,
             source,
             aiGenerated: pred.aiGenerated,
             explanation: pred.overallRisk.explanation || `Based on your screening on ${new Date(pred.date).toLocaleDateString()}`,
@@ -253,20 +284,25 @@ const Insights = () => {
           <div className="medical-card" style={{ padding: '20px', marginTop: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                {hasModelConfidence(risk) ? 'Model Confidence' : 'Estimate Source'}
+                {hasModelConfidence(risk) ? 'Model Confidence' : (risk.confidenceLabel || 'Estimate Source')}
               </span>
               <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)', textAlign: 'right' }}>
                 {hasModelConfidence(risk)
                   ? `${Math.round(Math.min(Math.max(risk.confidence, 0), 1) * 100)}%`
-                  : risk.confidenceLabel || getEstimateLabel(risk.source, risk.aiGenerated)}
+                  : (risk.inputCompleteness !== null && risk.inputCompleteness !== undefined
+                    ? `${risk.inputCompleteness}%`
+                    : getEstimateLabel(risk.source, risk.aiGenerated))}
               </span>
             </div>
-            {hasModelConfidence(risk) && (
+            {(hasModelConfidence(risk) || (risk.inputCompleteness !== null && risk.inputCompleteness !== undefined)) && (
               <div style={{
                 height: '6px', borderRadius: '3px', background: '#e2e8f0', overflow: 'hidden'
               }}>
                 <div style={{
-                  height: '100%', width: `${Math.min(Math.max(risk.confidence, 0), 1) * 100}%`,
+                  height: '100%', 
+                  width: `${hasModelConfidence(risk) 
+                    ? Math.min(Math.max(risk.confidence, 0), 1) * 100 
+                    : risk.inputCompleteness}%`,
                   background: 'linear-gradient(90deg, var(--primary), var(--accent-emerald))',
                   borderRadius: '3px', transition: 'width 1s ease-out'
                 }} />

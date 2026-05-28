@@ -65,16 +65,21 @@ const Onboarding = () => {
   const submitPreferences = async (skip = false) => {
     setLoading(true);
     try {
+      const cleanedFormData = { ...formData };
+      if (cleanedFormData.budgetAmount === '') {
+        delete cleanedFormData.budgetAmount;
+      }
+
       const payload = skip ? {
         onboardingCompleted: false,
         onboardingSkipped: true
       } : {
-        ...formData,
+        ...cleanedFormData,
         onboardingCompleted: true,
         onboardingSkipped: false
       };
 
-      const isGuest = user?.isGuest || user?.role === 'guest';
+      const isGuest = user?.isGuest || user?.role === 'guest' || user?.isMockGoogle || user?.role === 'demo';
       
       if (isGuest) {
         localStorage.setItem('vitaliq_onboarding', JSON.stringify(payload));
@@ -104,7 +109,7 @@ const Onboarding = () => {
   };
 
   return (
-    <div style={{
+    <div className="onboarding-wrapper" style={{
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
@@ -112,7 +117,7 @@ const Onboarding = () => {
       background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
       padding: '20px'
     }}>
-      <div className="animate-fade-in-scale" style={{
+      <div className="onboarding-card animate-fade-in-scale" style={{
         background: 'white',
         borderRadius: '24px',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
@@ -133,7 +138,8 @@ const Onboarding = () => {
             color: '#94a3b8',
             fontSize: '0.85rem',
             fontWeight: 700,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            zIndex: 10
           }}
         >
           Skip for now
@@ -166,15 +172,18 @@ const Onboarding = () => {
         {step === 1 && (
           <div className="animate-fade-in">
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '20px' }}>Step 1: About You</h2>
-            <div style={{ marginBottom: '20px' }}>
-              <label className="input-label" style={{ display: 'block', marginBottom: '10px' }}>Which best describes you?</label>
+            <div style={{ marginBottom: '24px' }}>
+              <label className="input-label" style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>Which best describes you?</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                 {USER_TYPES.map(type => (
                   <button
                     key={type} type="button"
                     onClick={() => handleChange('userType', type)}
+                    className="onboarding-select-btn"
                     style={{
-                      padding: '10px 16px', borderRadius: '12px',
+                      flex: '1 1 calc(50% - 10px)',
+                      minWidth: '130px',
+                      padding: '12px 16px', borderRadius: '12px',
                       border: `2px solid ${formData.userType === type ? 'var(--primary)' : '#e2e8f0'}`,
                       background: formData.userType === type ? 'var(--primary-50)' : 'white',
                       color: formData.userType === type ? 'var(--primary)' : 'var(--text-primary)',
@@ -185,14 +194,17 @@ const Onboarding = () => {
               </div>
             </div>
             <div>
-              <label className="input-label" style={{ display: 'block', marginBottom: '10px' }}>Your age group?</label>
+              <label className="input-label" style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>Your age group?</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                 {AGE_GROUPS.map(age => (
                   <button
                     key={age} type="button"
                     onClick={() => handleChange('ageGroup', age)}
+                    className="onboarding-select-btn"
                     style={{
-                      padding: '10px 16px', borderRadius: '12px',
+                      flex: '1 1 calc(33.33% - 10px)',
+                      minWidth: '90px',
+                      padding: '12px 10px', borderRadius: '12px',
                       border: `2px solid ${formData.ageGroup === age ? 'var(--primary)' : '#e2e8f0'}`,
                       background: formData.ageGroup === age ? 'var(--primary-50)' : 'white',
                       color: formData.ageGroup === age ? 'var(--primary)' : 'var(--text-primary)',
@@ -209,7 +221,7 @@ const Onboarding = () => {
         {step === 2 && (
           <div className="animate-fade-in">
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '20px' }}>Step 2: Main Goals</h2>
-            <label className="input-label" style={{ display: 'block', marginBottom: '12px' }}>What do you want to achieve? (Select multiple)</label>
+            <label className="input-label" style={{ display: 'block', marginBottom: '12px', fontWeight: 700 }}>What do you want to achieve? (Select multiple)</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {GOALS.map(goal => (
                 <div 
@@ -235,15 +247,18 @@ const Onboarding = () => {
         {step === 3 && (
           <div className="animate-fade-in">
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '20px' }}>Step 3: Food & Budget</h2>
-            <div style={{ marginBottom: '20px' }}>
-              <label className="input-label" style={{ display: 'block', marginBottom: '10px' }}>Food Preference</label>
+            <div style={{ marginBottom: '24px' }}>
+              <label className="input-label" style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>Food Preference</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                 {FOOD_PREFERENCES.map(pref => (
                   <button
                     key={pref} type="button"
                     onClick={() => handleChange('foodPreference', pref)}
+                    className="onboarding-select-btn"
                     style={{
-                      padding: '10px 16px', borderRadius: '12px',
+                      flex: '1 1 calc(50% - 10px)',
+                      minWidth: '130px',
+                      padding: '12px 16px', borderRadius: '12px',
                       border: `2px solid ${formData.foodPreference === pref ? 'var(--primary)' : '#e2e8f0'}`,
                       background: formData.foodPreference === pref ? 'var(--primary-50)' : 'white',
                       color: formData.foodPreference === pref ? 'var(--primary)' : 'var(--text-primary)',
@@ -254,9 +269,9 @@ const Onboarding = () => {
               </div>
             </div>
             
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-              <div style={{ flex: 1 }}>
-                <label className="input-label" style={{ display: 'block', marginBottom: '6px' }}>Food Budget (Optional)</label>
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 200px' }}>
+                <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 700 }}>Food Budget (Optional)</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontWeight: 600 }}>₹</span>
                   <input
@@ -266,8 +281,8 @@ const Onboarding = () => {
                   />
                 </div>
               </div>
-              <div style={{ flex: 1 }}>
-                <label className="input-label" style={{ display: 'block', marginBottom: '6px' }}>Period</label>
+              <div style={{ flex: '1 1 200px' }}>
+                <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 700 }}>Period</label>
                 <select className="select-field" value={formData.budgetPeriod} onChange={(e) => handleChange('budgetPeriod', e.target.value)}>
                   {BUDGET_PERIODS.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
@@ -275,7 +290,7 @@ const Onboarding = () => {
             </div>
 
             <div>
-              <label className="input-label" style={{ display: 'block', marginBottom: '6px' }}>Meals Per Day</label>
+              <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 700 }}>Meals Per Day</label>
               <select className="select-field" value={formData.mealsPerDay} onChange={(e) => handleChange('mealsPerDay', parseInt(e.target.value))}>
                 <option value={2}>2 Meals</option>
                 <option value={3}>3 Meals</option>
@@ -290,17 +305,30 @@ const Onboarding = () => {
         {step === 4 && (
           <div className="animate-fade-in">
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '20px' }}>Step 4: Living & Cooking</h2>
-            <div style={{ marginBottom: '20px' }}>
-              <label className="input-label" style={{ display: 'block', marginBottom: '10px' }}>Living Arrangement</label>
+            <div style={{ marginBottom: '24px' }}>
+              <label className="input-label" style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>Living Arrangement</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {LIVING_TYPES.map(type => (
-                  <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '12px', cursor: 'pointer' }}>
+                  <label 
+                    key={type} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px', 
+                      padding: '14px 16px', 
+                      background: formData.livingType === type ? 'var(--primary-50)' : '#f8fafc', 
+                      border: `2px solid ${formData.livingType === type ? 'var(--primary)' : 'transparent'}`,
+                      borderRadius: '12px', 
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
                     <input 
                       type="radio" 
                       name="livingType" 
                       checked={formData.livingType === type} 
                       onChange={() => handleChange('livingType', type)}
-                      style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
+                      style={{ width: '20px', height: '20px', accentColor: 'var(--primary)' }}
                     />
                     <span style={{ fontWeight: 600, color: '#0f172a' }}>{type}</span>
                   </label>
@@ -309,16 +337,29 @@ const Onboarding = () => {
             </div>
 
             <div>
-              <label className="input-label" style={{ display: 'block', marginBottom: '10px' }}>Cooking Access</label>
+              <label className="input-label" style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>Cooking Access</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {COOKING_ACCESS.map(access => (
-                  <label key={access} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '12px', cursor: 'pointer' }}>
+                  <label 
+                    key={access} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px', 
+                      padding: '14px 16px', 
+                      background: formData.cookingAccess === access ? 'var(--primary-50)' : '#f8fafc', 
+                      border: `2px solid ${formData.cookingAccess === access ? 'var(--primary)' : 'transparent'}`,
+                      borderRadius: '12px', 
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
                     <input 
                       type="radio" 
                       name="cookingAccess" 
                       checked={formData.cookingAccess === access} 
                       onChange={() => handleChange('cookingAccess', access)}
-                      style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
+                      style={{ width: '20px', height: '20px', accentColor: 'var(--primary)' }}
                     />
                     <span style={{ fontWeight: 600, color: '#0f172a' }}>{access}</span>
                   </label>
@@ -333,28 +374,64 @@ const Onboarding = () => {
           <div className="animate-fade-in">
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '20px' }}>Step 5: Your Routine</h2>
             
-            <div style={{ marginBottom: '20px' }}>
-              <label className="input-label" style={{ display: 'block', marginBottom: '6px' }}>Target Bedtime</label>
-              <select className="select-field" value={formData.sleepTarget} onChange={(e) => handleChange('sleepTarget', e.target.value)}>
-                <option value="" disabled>Select a time</option>
-                {SLEEP_TARGETS.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
+            <div style={{ marginBottom: '24px' }}>
+              <label className="input-label" style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>Target Bedtime</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {SLEEP_TARGETS.map(item => (
+                  <button
+                    key={item} type="button"
+                    onClick={() => handleChange('sleepTarget', item)}
+                    style={{
+                      width: '100%',
+                      padding: '14px 16px', borderRadius: '12px',
+                      border: `2px solid ${formData.sleepTarget === item ? 'var(--primary)' : '#e2e8f0'}`,
+                      background: formData.sleepTarget === item ? 'var(--primary-50)' : 'white',
+                      color: formData.sleepTarget === item ? 'var(--primary)' : 'var(--text-primary)',
+                      fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left'
+                    }}
+                  >{item}</button>
+                ))}
+              </div>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label className="input-label" style={{ display: 'block', marginBottom: '6px' }}>Activity Level</label>
-              <select className="select-field" value={formData.activityLevel} onChange={(e) => handleChange('activityLevel', e.target.value)}>
-                <option value="" disabled>Select activity level</option>
-                {ACTIVITY_LEVELS.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
+            <div style={{ marginBottom: '24px' }}>
+              <label className="input-label" style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>Activity Level</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {ACTIVITY_LEVELS.map(item => (
+                  <button
+                    key={item} type="button"
+                    onClick={() => handleChange('activityLevel', item)}
+                    style={{
+                      width: '100%',
+                      padding: '14px 16px', borderRadius: '12px',
+                      border: `2px solid ${formData.activityLevel === item ? 'var(--primary)' : '#e2e8f0'}`,
+                      background: formData.activityLevel === item ? 'var(--primary-50)' : 'white',
+                      color: formData.activityLevel === item ? 'var(--primary)' : 'var(--text-primary)',
+                      fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left'
+                    }}
+                  >{item}</button>
+                ))}
+              </div>
             </div>
 
             <div>
-              <label className="input-label" style={{ display: 'block', marginBottom: '6px' }}>What reminders do you want?</label>
-              <select className="select-field" value={formData.reminderPreference} onChange={(e) => handleChange('reminderPreference', e.target.value)}>
-                <option value="" disabled>Select preference</option>
-                {REMINDER_PREFS.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
+              <label className="input-label" style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>What reminders do you want?</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {REMINDER_PREFS.map(item => (
+                  <button
+                    key={item} type="button"
+                    onClick={() => handleChange('reminderPreference', item)}
+                    style={{
+                      width: '100%',
+                      padding: '14px 16px', borderRadius: '12px',
+                      border: `2px solid ${formData.reminderPreference === item ? 'var(--primary)' : '#e2e8f0'}`,
+                      background: formData.reminderPreference === item ? 'var(--primary-50)' : 'white',
+                      color: formData.reminderPreference === item ? 'var(--primary)' : 'var(--text-primary)',
+                      fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left'
+                    }}
+                  >{item}</button>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -404,8 +481,33 @@ const Onboarding = () => {
         </div>
 
       </div>
+
+      <style>{`
+        @media (max-width: 600px) {
+          .onboarding-card {
+            padding: 24px 16px 40px 16px !important;
+            border-radius: 0px !important;
+            min-height: 100vh;
+            width: 100% !important;
+            max-width: 100% !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            box-shadow: none !important;
+          }
+          .onboarding-wrapper {
+            padding: 0 !important;
+            background: white !important;
+          }
+          .onboarding-select-btn {
+            font-size: 0.85rem !important;
+            padding: 10px 12px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
 export default Onboarding;
+

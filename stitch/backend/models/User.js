@@ -75,7 +75,8 @@ const userSchema = new mongoose.Schema({
     cityOrRegion: { type: String },
     sleepTarget: { type: String },
     activityLevel: { type: String },
-    reminderPreference: { type: String }
+    reminderPreference: { type: String },
+    updatedAt: { type: Date }
   },
   otp: {
     type: String

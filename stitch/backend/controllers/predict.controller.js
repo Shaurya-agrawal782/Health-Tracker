@@ -135,7 +135,7 @@ exports.predict = async (req, res) => {
     };
 
 
-    const isGuest = req.user && (req.user.isGuest || req.user.role === 'guest');
+    const isGuest = req.user && (req.user.isGuest || req.user.role === 'guest' || req.user.isMockGoogle || req.user.role === 'demo');
 
     // Create pending prediction record
     let prediction;
@@ -185,10 +185,20 @@ exports.predict = async (req, res) => {
       
       const score = Math.min(Math.max(10 + (riskCount * 20) + dynamicScore, 5), 100);
 
+      const totalOptionalFields = 5;
+      const missingCount = [glucose, bloodPressure, familyHistory, smoking, alcohol].filter(v => v == null || v === '').length;
+      const inputCompleteness = Math.round(((totalOptionalFields - missingCount) / totalOptionalFields) * 100);
+
+      const realMLConfidence = (predictRes.data.confidence !== undefined) ? predictRes.data.confidence : 
+                               ((predictRes.data.probability !== undefined) ? predictRes.data.probability : null);
+
       let overallRisk = {
         level: riskCount >= 2 ? 'High' : riskCount === 1 ? 'Medium' : 'Low',
         score: Math.round(score),
-        confidence: 0.85 + (Math.random() * 0.1) // Simulated confidence variance
+        confidence: realMLConfidence,
+        confidenceLabel: realMLConfidence !== null ? "Model confidence" : "Input completeness",
+        inputCompleteness,
+        source: 'ml_model'
       };
 
       // Fetch SHAP explanations for all 3 models in parallel
@@ -246,11 +256,18 @@ exports.predict = async (req, res) => {
             stress: geminiAnalysis.level === 'High' || geminiAnalysis.level === 'Medium' ? 1 : 0
           };
 
+          const totalOptionalFields = 5;
+          const missingCount = [glucose, bloodPressure, familyHistory, smoking, alcohol].filter(v => v == null || v === '').length;
+          const inputCompleteness = Math.round(((totalOptionalFields - missingCount) / totalOptionalFields) * 100);
+
           prediction.results = results;
           prediction.overallRisk = {
             level: geminiAnalysis.level,
             score: geminiAnalysis.score,
-            confidence: geminiAnalysis.confidence,
+            confidence: null,
+            confidenceLabel: 'Input completeness',
+            inputCompleteness,
+            source: 'ai_assisted',
             explanation: geminiAnalysis.explanation
           };
           prediction.recommendations = geminiAnalysis.recommendations;
@@ -296,12 +313,17 @@ exports.predict = async (req, res) => {
       if (mlInput.stress_level === 'High') calculatedScore += 12;
       
       const score = Math.min(Math.round(calculatedScore), 100);
-      const confidence = 0.82 + (Math.random() * 0.12); // Dynamic 82-94% confidence
+      const totalOptionalFields = 5;
+      const missingCount = [glucose, bloodPressure, familyHistory, smoking, alcohol].filter(v => v == null || v === '').length;
+      const inputCompleteness = Math.round(((totalOptionalFields - missingCount) / totalOptionalFields) * 100);
 
       const overallRisk = {
         level: score > 70 ? 'High' : score > 35 ? 'Medium' : 'Low',
         score,
-        confidence: +confidence.toFixed(2),
+        confidence: null,
+        confidenceLabel: 'Input completeness',
+        inputCompleteness,
+        source: 'rule_based',
         explanation: `Analysis based on BMI (${bmi}), glucose levels, and reported lifestyle patterns.`
       };
 
@@ -363,7 +385,7 @@ exports.getPrediction = async (req, res) => {
 // @route   GET /api/predict/history
 exports.getHistory = async (req, res) => {
   try {
-    const isGuest = req.user && (req.user.isGuest || req.user.role === 'guest');
+    const isGuest = req.user && (req.user.isGuest || req.user.role === 'guest' || req.user.isMockGoogle || req.user.role === 'demo');
     if (isGuest) {
       return res.json({
         success: true,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import EmptyState from '../components/common/EmptyState';
 import { predictAPI, weeklyCheckinAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -22,7 +23,7 @@ const filterTabs = ['All', 'Screening', 'Routine Check', 'Lab Result', 'Consulta
 
 const MedicalHistory = () => {
   const { user } = useAuth();
-  const isGuest = user?.isGuest || user?.role === 'guest';
+  const isGuest = user?.isGuest || user?.role === 'guest' || user?.isMockGoogle || user?.role === 'demo';
   
   // Weekly Check-in state
   const [weeklyCheckins, setWeeklyCheckins] = useState([]);
@@ -267,34 +268,15 @@ const MedicalHistory = () => {
             </div>
           </div>
 
-          {/* Locked History Card */}
-          <div className="medical-card" style={{
-            textAlign: 'center', padding: '48px 36px',
-            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-            border: '1px solid var(--border-light)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px'
-          }}>
-            <div style={{
-              width: '64px', height: '64px', borderRadius: '50%', background: 'var(--primary-50)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)'
-            }}>
-              <FiLock size={26} />
-            </div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-              Wellness Screening Logs Locked
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', maxWidth: '440px', lineHeight: 1.6, margin: 0 }}>
-              Detailed wellness screening checkups, risk estimations, and permanent clinical charts are available to registered members only. Keep a permanent journal by signing up today.
-            </p>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-              <Link to="/login" className="btn-primary" style={{ padding: '10px 24px', fontSize: '0.85rem', fontWeight: 700 }}>
-                <FiLogIn size={16} /> Sign In
-              </Link>
-              <Link to="/register" className="btn-ghost" style={{ padding: '10px 24px', fontSize: '0.85rem', fontWeight: 700, border: '1px solid var(--border-light)' }}>
-                <FiUserPlus size={16} /> Create Account
-              </Link>
-            </div>
-          </div>
+          {/* Guest Empty State Card */}
+          <EmptyState
+            title="Guest results are not saved permanently. Sign in to save your wellness history."
+            icon="🔒"
+            primaryActionLabel="Create Account"
+            primaryActionTo="/register"
+            secondaryActionLabel="Start Wellness Check"
+            secondaryActionTo="/health-check"
+          />
         </div>
       ) : (
         /* Authenticated Users see full History and filters */
@@ -342,16 +324,13 @@ const MedicalHistory = () => {
               <div className="spinner" />
             </div>
           ) : filteredPredictions.length === 0 ? (
-            <div className="medical-card" style={{ padding: '60px', textAlign: 'center' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📋</div>
-              <h3 style={{ fontWeight: 600, marginBottom: '8px' }}>No Records Found</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
-                {activeFilter !== 'All' ? `No ${activeFilter} records found.` : 'Start a wellness screening to create your history.'}
-              </p>
-              <Link to="/health-check" className="btn-primary" style={{ padding: '10px 24px' }}>
-                Start Wellness Screening
-              </Link>
-            </div>
+            <EmptyState
+              title="Your wellness history will appear here after your first check."
+              description={activeFilter !== 'All' ? `No previous logs found matching the filter: ${activeFilter}` : "Start your wellness screening journey to view historic records."}
+              icon="📋"
+              primaryActionLabel="Start Wellness Check"
+              primaryActionTo="/health-check"
+            />
           ) : (
             <div className="medical-card" style={{ overflow: 'hidden' }}>
               <table className="medical-table">

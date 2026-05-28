@@ -396,9 +396,20 @@ exports.updatePreferences = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
+    const preferencesData = { ...req.body };
+    if (preferencesData.budgetAmount === '' || preferencesData.budgetAmount === null) {
+      delete preferencesData.budgetAmount;
+    }
+
+    if (preferencesData.displayName) {
+      user.name = preferencesData.displayName;
+      delete preferencesData.displayName;
+    }
+
     user.preferences = {
       ...user.preferences,
-      ...req.body
+      ...preferencesData,
+      updatedAt: new Date()
     };
 
     await user.save();
@@ -406,7 +417,13 @@ exports.updatePreferences = async (req, res) => {
     res.json({
       success: true,
       message: 'Preferences updated successfully',
-      preferences: user.preferences
+      preferences: user.preferences,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        preferences: user.preferences
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

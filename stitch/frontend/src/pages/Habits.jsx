@@ -6,6 +6,7 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import EmptyState from '../components/common/EmptyState';
 
 // Default habits template
 const DEFAULT_HABITS = [
@@ -104,7 +105,7 @@ const Habits = () => {
   const [habitHistory, setHabitHistory] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const isGuest = user?.isGuest || user?.role === 'guest';
+  const isGuest = user?.isGuest || user?.role === 'guest' || user?.isMockGoogle || user?.role === 'demo';
   const guestOnboarding = JSON.parse(localStorage.getItem('vitaliq_onboarding') || '{}');
   const prefs = isGuest ? guestOnboarding : (user?.preferences || {});
   const onboardingCompleted = prefs.onboardingCompleted;
@@ -361,73 +362,74 @@ const Habits = () => {
         </div>
       )}
 
-      {/* Weekly Overview Section */}
-      <div className="medical-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-          Weekly Overview
-        </h2>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-          {/* Progress Stat */}
-          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Weekly completions</span>
-            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', margin: '8px 0' }}>
-              {totalCompletionsThisWeek} of {totalPossibleThisWeek} logs
-            </div>
-            {/* Progress bar */}
-            <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ 
-                width: `${(totalCompletionsThisWeek / totalPossibleThisWeek) * 100}%`, 
-                height: '100%', 
-                background: 'var(--primary)',
-                transition: 'width 0.4s ease'
-              }} />
-            </div>
-          </div>
-
-          {/* Best Habit Stat */}
-          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d', flexShrink: 0 }}>
-              <FiTrendingUp size={20} />
-            </div>
-            <div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Best Habit</span>
-              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
-                {bestHabitName}
+      {/* Weekly Overview Section / Empty State */}
+      {!hasAnyHistory ? (
+        <EmptyState
+          title="Start your first habit today"
+          description="Small daily wins build long-term consistency."
+          icon="⚡"
+          primaryActionLabel="Mark a Habit Done"
+          primaryActionOnClick={() => handleToggleHabit('water')}
+          note={isGuest ? "Guest habit progress is saved on this device only." : null}
+        />
+      ) : (
+        <div className="medical-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+            Weekly Overview
+          </h2>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+            {/* Progress Stat */}
+            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Weekly completions</span>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', margin: '8px 0' }}>
+                {totalCompletionsThisWeek} of {totalPossibleThisWeek} logs
               </div>
-              <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>
-                {maxCompletions > 0 ? `${maxCompletions} completions` : 'No completions yet'}
-              </span>
-            </div>
-          </div>
-
-          {/* Attention Habit Stat */}
-          <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b91c1c', flexShrink: 0 }}>
-              <FiTrendingDown size={20} />
-            </div>
-            <div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Needs Attention</span>
-              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
-                {needsAttentionName}
+              {/* Progress bar */}
+              <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${(totalCompletionsThisWeek / totalPossibleThisWeek) * 100}%`, 
+                  height: '100%', 
+                  background: 'var(--primary)',
+                  transition: 'width 0.4s ease'
+                }} />
               </div>
-              <span style={{ fontSize: '0.72rem', color: '#b91c1c', fontWeight: 600 }}>
-                {minCompletions < 7 && maxCompletions > 0 ? `${minCompletions} completions` : 'Start check-ins today'}
-              </span>
+            </div>
+
+            {/* Best Habit Stat */}
+            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d', flexShrink: 0 }}>
+                <FiTrendingUp size={20} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Best Habit</span>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+                  {bestHabitName}
+                </div>
+                <span style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 600 }}>
+                  {maxCompletions > 0 ? `${maxCompletions} completions` : 'No completions yet'}
+                </span>
+              </div>
+            </div>
+
+            {/* Attention Habit Stat */}
+            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b91c1c', flexShrink: 0 }}>
+                <FiTrendingDown size={20} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Needs Attention</span>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+                  {needsAttentionName}
+                </div>
+                <span style={{ fontSize: '0.72rem', color: '#b91c1c', fontWeight: 600 }}>
+                  {minCompletions < 7 && maxCompletions > 0 ? `${minCompletions} completions` : 'Start check-ins today'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Empty History Message */}
-        {!hasAnyHistory && (
-          <div style={{ 
-            background: 'linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%)', border: '1px dashed #6ee7b7', 
-            borderRadius: '16px', padding: '16px', textAlign: 'center', color: '#065f46', fontSize: '0.9rem', fontWeight: 700 
-          }}>
-            Start with one habit today. Small wins build consistency. ✨
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Habits Checklist */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>

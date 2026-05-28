@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { weeklyCheckinAPI } from '../services/api';
 import { 
@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
+import EmptyState from '../components/common/EmptyState';
 
 const SCORE_MAPS = {
   sleepQuality: { Poor: 25, Okay: 50, Good: 75, Great: 90 },
@@ -28,9 +29,30 @@ const STEPS = [
 const WeeklyCheckin = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isGuest = user?.isGuest || user?.role === 'guest';
+  const isGuest = user?.isGuest || user?.role === 'guest' || user?.isMockGoogle || user?.role === 'demo';
 
   const [currentStep, setCurrentStep] = useState(0);
+  const [hasHistory, setHasHistory] = useState(false);
+  const [started, setStarted] = useState(false);
+  
+  useEffect(() => {
+    const fetchCheckins = async () => {
+      try {
+        let history = [];
+        if (isGuest) {
+          history = JSON.parse(localStorage.getItem('vitaliq_weekly_checkins') || '[]');
+        } else {
+          const res = await weeklyCheckinAPI.getAll();
+          history = res.data?.data || [];
+        }
+        setHasHistory(history.length > 0);
+      } catch (err) {
+        console.warn('Failed to load checkin history:', err);
+      }
+    };
+    fetchCheckins();
+  }, [isGuest]);
+
   const [formData, setFormData] = useState({
     sleepQuality: '',
     energyLevel: '',
@@ -416,6 +438,30 @@ const WeeklyCheckin = () => {
     );
   }
 
+  if (!submittedCheckin && !hasHistory && !started) {
+    return (
+      <div className="page-enter" style={{ maxWidth: '640px', margin: '0 auto', paddingBottom: '40px' }}>
+        {/* Page Header */}
+        <div style={{ marginBottom: '24px' }}>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span className="gradient-text">Weekly Check-in</span> <FiCalendar color="var(--primary)" />
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '4px' }}>
+            Review your week, track consistency, and unlock new wellness insights.
+          </p>
+        </div>
+
+        <EmptyState
+          title="Complete your first weekly check-in"
+          description="Reflect on sleep, stress, food, activity, and energy to track your progress."
+          icon="📅"
+          primaryActionLabel="Start Weekly Check-in"
+          primaryActionOnClick={() => setStarted(true)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="page-enter" style={{ maxWidth: '640px', margin: '0 auto', paddingBottom: '40px' }}>
       
@@ -495,7 +541,7 @@ const WeeklyCheckin = () => {
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 How was your sleep quality this week?
               </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="weekly-btn-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {renderOptionButton('sleepQuality', 'Poor', 'Poor 🥱')}
                 {renderOptionButton('sleepQuality', 'Okay', 'Okay 😐')}
                 {renderOptionButton('sleepQuality', 'Good', 'Good 😊')}
@@ -507,7 +553,7 @@ const WeeklyCheckin = () => {
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 How was your average energy level?
               </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="weekly-btn-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {renderOptionButton('energyLevel', 'Low', 'Low 🔋')}
                 {renderOptionButton('energyLevel', 'Medium', 'Medium ⚡')}
                 {renderOptionButton('energyLevel', 'Good', 'Good 🔥')}
@@ -533,7 +579,7 @@ const WeeklyCheckin = () => {
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 How stressed did you feel this week?
               </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="weekly-btn-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {renderOptionButton('stressLevel', 'Low', 'Low 😌')}
                 {renderOptionButton('stressLevel', 'Medium', 'Medium 😐')}
                 {renderOptionButton('stressLevel', 'High', 'High 😰')}
@@ -545,7 +591,7 @@ const WeeklyCheckin = () => {
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 How was your mood overall?
               </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="weekly-btn-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {renderOptionButton('mood', 'Low', 'Low 😔')}
                 {renderOptionButton('mood', 'Okay', 'Okay 😐')}
                 {renderOptionButton('mood', 'Good', 'Good 🙂')}
@@ -571,7 +617,7 @@ const WeeklyCheckin = () => {
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 How often did you follow your meal plan?
               </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="weekly-btn-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {renderOptionButton('mealConsistency', 'Rarely', 'Rarely 🚫')}
                 {renderOptionButton('mealConsistency', '2–3 days', '2–3 days 🥗')}
                 {renderOptionButton('mealConsistency', '4–5 days', '4–5 days 🍲')}
@@ -583,7 +629,7 @@ const WeeklyCheckin = () => {
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 How active were you this week?
               </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="weekly-btn-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {renderOptionButton('activityLevel', 'Mostly inactive', 'Sitting 🪑')}
                 {renderOptionButton('activityLevel', 'Lightly active', 'Light 🚶')}
                 {renderOptionButton('activityLevel', 'Moderately active', 'Moderate 🏃')}
@@ -609,7 +655,7 @@ const WeeklyCheckin = () => {
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 How was your screen time balance?
               </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="weekly-btn-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {renderOptionButton('screenBalance', 'Poor', 'Poor 📱')}
                 {renderOptionButton('screenBalance', 'Okay', 'Okay 😐')}
                 {renderOptionButton('screenBalance', 'Good', 'Good 👓')}
@@ -713,6 +759,16 @@ const WeeklyCheckin = () => {
           </span>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 480px) {
+          .weekly-btn-group {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 8px !important;
+          }
+        }
+      `}</style>
 
     </div>
   );

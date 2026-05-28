@@ -23,7 +23,9 @@ import MealPlanner from './pages/MealPlanner';
 import Leaderboard from './pages/Leaderboard';
 import Habits from './pages/Habits';
 import WeeklyCheckin from './pages/WeeklyCheckin';
+import Progress from './pages/Progress';
 import Privacy from './pages/Privacy';
+import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 
 // Layout
@@ -53,7 +55,7 @@ const ProtectedRoute = ({ children }) => {
   }
 
   // Check if onboarding is needed
-  const isGuest = user?.isGuest || user?.role === 'guest';
+  const isGuest = user?.isGuest || user?.role === 'guest' || user?.isMockGoogle || user?.role === 'demo';
   const guestOnboarding = JSON.parse(localStorage.getItem('vitaliq_onboarding') || '{}');
   
   const onboardingCompleted = isGuest 
@@ -169,10 +171,12 @@ function App() {
             <Route path="/history" element={<MedicalHistory />} />
             <Route path="/insights" element={<Insights />} />
             <Route path="/daily-actions" element={<DailyActions />} />
-            <Route path="/recommendations" element={<Navigate to="/daily-actions" replace />} />
+            <Route path="/recommendations" element={<Recommendations />} />
             <Route path="/habits" element={<Habits />} />
             <Route path="/weekly-checkin" element={<WeeklyCheckin />} />
+            <Route path="/progress" element={<Progress />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
 
           {/* Catch-all */}

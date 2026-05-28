@@ -96,7 +96,39 @@ const HealthResults = () => {
   const riskCount = (results?.diabetes || 0) + (results?.bp || 0) + (results?.stress || 0);
   const estimateSource = overallRisk?.source || prediction.source || (prediction.aiGenerated ? 'ai_assisted' : null);
   const rawConfidence = Number.parseFloat(overallRisk?.confidence ?? prediction.confidence);
-  const hasModelConfidence = estimateSource === 'ml_model' && Number.isFinite(rawConfidence);
+
+  const getFallbackCompleteness = (input) => {
+    if (!input) return 60;
+    const providedGlucose = (input.glucose !== undefined && input.glucose !== null && input.glucose !== '');
+    const providedBP = (input.bloodPressure !== undefined && input.bloodPressure !== null && input.bloodPressure !== '') ||
+                       (input.systolic !== undefined && input.systolic !== null && input.systolic !== '' &&
+                        input.diastolic !== undefined && input.diastolic !== null && input.diastolic !== '');
+    const providedFamily = (input.familyHistory !== undefined && input.familyHistory !== null && input.familyHistory !== '') ||
+                           (input.family !== undefined && input.family !== null && input.family !== '');
+    const providedSmoking = (input.smoking !== undefined && input.smoking !== null && input.smoking !== '');
+    const providedAlcohol = (input.alcohol !== undefined && input.alcohol !== null && input.alcohol !== '');
+
+    const providedCount = [
+      providedGlucose,
+      providedBP,
+      providedFamily,
+      providedSmoking,
+      providedAlcohol
+    ].filter(Boolean).length;
+
+    return Math.round((providedCount / 5) * 100);
+  };
+
+  const resolvedCompleteness = typeof overallRisk?.inputCompleteness === 'number'
+    ? overallRisk.inputCompleteness
+    : (typeof prediction.inputCompleteness === 'number'
+      ? prediction.inputCompleteness
+      : getFallbackCompleteness(input));
+
+  const hasModelConfidence = estimateSource === 'ml_model' && 
+                             Number.isFinite(rawConfidence) && 
+                             (overallRisk?.confidenceLabel === 'Model confidence' || prediction.confidenceLabel === 'Model confidence');
+
   const confidencePercent = hasModelConfidence ? Math.round(Math.min(Math.max(rawConfidence, 0), 1) * 100) : null;
   const estimateLabel = overallRisk?.confidenceLabel || prediction.confidenceLabel || getEstimateLabel(estimateSource, prediction.aiGenerated);
   const inputRows = [
@@ -285,23 +317,63 @@ const HealthResults = () => {
             </div>
           ) : (
             <div style={{
-              width: '180px',
-              minHeight: '96px',
+              width: '240px',
               margin: '0 auto 16px auto',
-              padding: '18px 16px',
+              padding: '16px 20px',
               borderRadius: '16px',
-              background: 'rgba(255,255,255,0.16)',
-              border: '1px solid rgba(255,255,255,0.28)',
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'center',
-              gap: '6px'
+              gap: '12px',
+              textAlign: 'left'
             }}>
-              <div style={{ fontSize: '0.68rem', opacity: 0.78, fontWeight: 700, textTransform: 'uppercase' }}>
-                Estimate Source
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  {estimateSource === 'ai_assisted' ? 'AI-Assisted' : 'Wellness Estimate'}
+                </span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>
+                  {resolvedCompleteness}%
+                </span>
               </div>
-              <div style={{ fontSize: '0.98rem', fontWeight: 800, lineHeight: 1.25 }}>
-                {estimateLabel}
+
+              <div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px' }}>
+                  {estimateLabel}
+                </div>
+                {/* Horizontal Progress Bar */}
+                <div style={{
+                  width: '100%',
+                  height: '8px',
+                  borderRadius: '999px',
+                  background: 'rgba(255, 255, 255, 0.25)',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${resolvedCompleteness}%`,
+                    height: '100%',
+                    background: 'white',
+                    borderRadius: '999px',
+                    transition: 'width 1s ease-out'
+                  }} />
+                </div>
+              </div>
+
+              <div style={{ 
+                fontSize: '0.72rem', 
+                lineHeight: '1.4', 
+                opacity: 0.88, 
+                fontWeight: 500 
+              }}>
+                This estimate is based on the information you provided. Add optional health metrics for a more complete wellness estimate.
               </div>
             </div>
           )}

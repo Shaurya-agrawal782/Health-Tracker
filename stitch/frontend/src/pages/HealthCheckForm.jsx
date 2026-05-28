@@ -306,6 +306,21 @@ const HealthCheckForm = () => {
 
       if (predictionData.isSaved === false) {
         sessionStorage.setItem(`guest_prediction_${predictionId}`, JSON.stringify(predictionData));
+        localStorage.setItem('vitaliq_latest_wellness_check', JSON.stringify(predictionData));
+        try {
+          const existing = localStorage.getItem('vitaliq_wellness_checks');
+          const list = existing ? JSON.parse(existing) : [];
+          if (Array.isArray(list)) {
+            // Remove any duplicates with same id
+            const filtered = list.filter(item => item.id !== predictionId);
+            filtered.unshift(predictionData);
+            localStorage.setItem('vitaliq_wellness_checks', JSON.stringify(filtered.slice(0, 50)));
+          } else {
+            localStorage.setItem('vitaliq_wellness_checks', JSON.stringify([predictionData]));
+          }
+        } catch (e) {
+          console.error('Error saving guest predictions to localStorage:', e);
+        }
       }
 
       navigate('/analyzing', { state: { predictionId, formData: payload } });
@@ -797,12 +812,12 @@ const HealthCheckForm = () => {
       </div>
 
       {/* Step Content */}
-      <div className="medical-card animate-fade-in" style={{ padding: '32px', maxWidth: '760px', margin: '0 auto' }}>
+      <div className="medical-card hcf-card animate-fade-in" style={{ padding: '32px', maxWidth: '760px', margin: '0 auto' }}>
         {stepRenderers[currentStep]?.()}
       </div>
 
       {/* Navigation Buttons */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: '760px', margin: '24px auto 0', gap: '16px' }}>
+      <div className="hcf-btn-container" style={{ display: 'flex', justifyContent: 'space-between', maxWidth: '760px', margin: '24px auto 0', gap: '16px' }}>
         <button
           className="btn-ghost" onClick={prevStep} disabled={currentStep === 0}
           style={{ opacity: currentStep === 0 ? 0.4 : 1, padding: '12px 28px' }}
@@ -824,8 +839,34 @@ const HealthCheckForm = () => {
           </button>
         )}
       </div>
+
+      <style>{`
+        @media (max-width: 600px) {
+          .hcf-card {
+            padding: 20px 16px !important;
+            border-radius: 12px !important;
+          }
+          .hcf-btn-container {
+            margin-top: 16px !important;
+            padding: 0 4px !important;
+          }
+          .step-indicator {
+            margin-bottom: 24px !important;
+          }
+          .step-line {
+            min-width: 15px !important;
+            width: 25px !important;
+          }
+          .step-circle {
+            width: 30px !important;
+            height: 30px !important;
+            font-size: 0.75rem !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
 export default HealthCheckForm;
+

@@ -73,6 +73,7 @@ const predictionSchema = new mongoose.Schema({
     score: { type: Number, default: 0 },
     confidence: { type: Number, default: null },
     confidenceLabel: { type: String, default: '' },
+    inputCompleteness: { type: Number, default: null },
     source: { type: String, default: '' },
     explanation: { type: String, default: '' }
   },

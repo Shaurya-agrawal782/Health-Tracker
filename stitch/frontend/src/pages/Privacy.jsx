@@ -1,4 +1,7 @@
+import React, { useState } from 'react';
 import { FiShield, FiLock, FiEyeOff, FiDatabase, FiUser, FiTrash2 } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const privacyPoints = [
   {
@@ -52,6 +55,39 @@ const privacyPoints = [
 ];
 
 const Privacy = () => {
+  const { user } = useAuth();
+  const isGuest = !user || user.isGuest || user.role === 'guest' || user.isMockGoogle || user.role === 'demo';
+
+  const checkGuestData = () => {
+    const onboarding = localStorage.getItem('vitaliq_onboarding');
+    const checks = localStorage.getItem('vitaliq_wellness_checks');
+    const checkins = localStorage.getItem('vitaliq_weekly_checkins');
+    const habits = localStorage.getItem('vitaliq_habit_history');
+    return !!(onboarding || checks || checkins || habits);
+  };
+
+  const [hasGuestData, setHasGuestData] = useState(checkGuestData());
+
+  const handleClearGuestData = () => {
+    const confirmDelete = window.confirm('Are you sure you want to delete all guest wellness history and preferences from this device? This action cannot be undone.');
+    if (!confirmDelete) return;
+
+    localStorage.removeItem('vitaliq_onboarding');
+    localStorage.removeItem('vitaliq_wellness_checks');
+    localStorage.removeItem('vitaliq_weekly_checkins');
+    localStorage.removeItem('vitaliq_habit_history');
+    localStorage.removeItem('vitaliq_latest_checkin');
+    
+    // Clear all habit and daily action daily logs
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('vitaliq_daily_actions_') || key.startsWith('vitaliq_habits_')) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    setHasGuestData(false);
+    toast.success('All guest data successfully removed from this device! 🗑️');
+  };
   return (
     <div className="page-enter">
       {/* Page Header */}
@@ -102,7 +138,7 @@ const Privacy = () => {
       {/* Privacy cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
         gap: '20px',
         marginBottom: '40px'
       }}>
@@ -127,6 +163,52 @@ const Privacy = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Data Management / Privacy Controls */}
+      <div className="medical-card" style={{ padding: '28px', marginBottom: '32px' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FiDatabase /> Data Control Center
+        </h3>
+        
+        {isGuest ? (
+          <div>
+            {hasGuestData ? (
+              <div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
+                  As a guest, your wellness screenings, preferences, weekly reflections, and habit history are stored directly in your browser's local storage. You can delete all this data at any time.
+                </p>
+                <button
+                  onClick={handleClearGuestData}
+                  className="btn-primary"
+                  style={{
+                    background: '#dc2626',
+                    borderColor: '#dc2626',
+                    color: 'white',
+                    fontWeight: 700,
+                    padding: '12px 24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <FiTrash2 /> Clear Guest Data from Device
+                </button>
+              </div>
+            ) : (
+              <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>
+                No guest data found on this device.
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '0' }}>
+              Account data controls are planned for the next release.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Footer note */}

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { predictAPI } from '../services/api';
 import { generateDailyActions } from '../utils/actionGenerator';
 import { Link } from 'react-router-dom';
+import EmptyState from '../components/common/EmptyState';
 import { 
   FiCheckCircle, FiRefreshCw, FiCheck, FiSquare, FiCheckSquare, 
   FiClock, FiAlertTriangle, FiArrowRight, FiZap, FiSmile
@@ -41,7 +42,7 @@ const DailyActions = () => {
   const [loading, setLoading] = useState(true);
   const [checks, setChecks] = useState([]);
 
-  const isGuest = user?.isGuest || user?.role === 'guest';
+  const isGuest = user?.isGuest || user?.role === 'guest' || user?.isMockGoogle || user?.role === 'demo';
   const guestOnboarding = JSON.parse(localStorage.getItem('vitaliq_onboarding') || '{}');
   const prefs = isGuest ? guestOnboarding : (user?.preferences || {});
   const onboardingCompleted = prefs.onboardingCompleted;
@@ -200,30 +201,13 @@ const DailyActions = () => {
 
       {/* Onboarding CTA Card (Empty state context) */}
       {!onboardingCompleted && (
-        <div className="animate-fade-in" style={{
-          background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
-          border: '1px solid #7dd3fc',
-          padding: '24px',
-          borderRadius: '20px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '16px',
-          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
-        }}>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0369a1', marginBottom: '6px' }}>
-              Personalize your plan to get smarter daily actions.
-            </h3>
-            <p style={{ color: '#0c4a6e', fontSize: '0.9rem', margin: 0, fontWeight: 500 }}>
-              Complete onboarding to get custom suggestions tailored to your diet, budget, role, and wellness goals.
-            </p>
-          </div>
-          <Link to="/onboarding" className="btn-primary" style={{ background: '#0284c7', color: 'white', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Complete Onboarding <FiArrowRight />
-          </Link>
-        </div>
+        <EmptyState
+          title="Personalize your actions"
+          description="Complete onboarding to get smarter daily actions."
+          primaryActionLabel="Complete Onboarding"
+          primaryActionTo="/onboarding"
+          icon="🎯"
+        />
       )}
 
       {/* Progress & Consistency Card */}

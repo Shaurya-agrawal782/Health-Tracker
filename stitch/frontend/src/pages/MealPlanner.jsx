@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import { FiCoffee, FiSun, FiMoon, FiZap, FiCheckCircle, FiEdit2, FiAlertTriangle, FiDollarSign } from 'react-icons/fi';
 import { recommendationAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import EmptyState from '../components/common/EmptyState';
 import toast from 'react-hot-toast';
 
 const MealPlanner = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [mealPlan, setMealPlan] = useState(null);
+  const [showForm, setShowForm] = useState(false);
 
   // Helper to load and map onboarding preferences if they exist
   const getMappedPreferences = () => {
-    const isGuest = user?.isGuest || user?.role === 'guest';
+    const isGuest = user?.isGuest || user?.role === 'guest' || user?.isMockGoogle || user?.role === 'demo';
     const guestOnboarding = JSON.parse(localStorage.getItem('vitaliq_onboarding') || '{}');
     const prefs = isGuest ? guestOnboarding : (user?.preferences || {});
 
@@ -151,7 +153,7 @@ const MealPlanner = () => {
               </span>
             </div>
           </div>
-          <button onClick={() => setMealPlan(null)} className="btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+          <button onClick={() => { setMealPlan(null); setShowForm(true); }} className="btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
             <FiEdit2 /> Edit Budget & Regenerate
           </button>
         </div>
@@ -260,6 +262,35 @@ const MealPlanner = () => {
     );
   }
 
+  if (!mealPlan && !showForm) {
+    const hasSavedBudget = initialPrefs.budgetAmount;
+    const budgetNote = hasSavedBudget
+      ? `Your saved budget: ₹${initialPrefs.budgetAmount} ${initialPrefs.budgetPeriod?.toLowerCase()}`
+      : null;
+
+    return (
+      <div className="page-enter" style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '40px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '8px' }}>
+            <span className="gradient-text">Budget-Based Meal Planner</span> 🥗
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+            VitalIQ suggests affordable meal ideas based on your budget and preferences. Prices are approximate and may vary by location.
+          </p>
+        </div>
+
+        <EmptyState
+          title="Generate a budget-friendly meal plan"
+          description="Choose your budget, food preference, and cooking access to get practical meal ideas."
+          icon="🥗"
+          primaryActionLabel="Create Meal Plan"
+          primaryActionOnClick={() => setShowForm(true)}
+          note={budgetNote}
+        />
+      </div>
+    );
+  }
+
   // Setup View
   return (
     <div className="page-enter" style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -299,15 +330,15 @@ const MealPlanner = () => {
 
           {/* Custom Budget Amount (Conditionally Rendered) */}
           {budgetLevel === 'Custom' && (
-            <div className="animate-fade-in" style={{ display: 'flex', gap: '16px' }}>
-              <div style={{ flex: 1 }}>
+            <div className="animate-fade-in" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 180px' }}>
                 <label className="input-label" style={{ display: 'block', marginBottom: '6px' }}>What is your food budget? (₹)</label>
                 <input
                   type="number" className="input-field" placeholder="Example: 150"
                   value={budgetAmount} onChange={(e) => setBudgetAmount(e.target.value)} required
                 />
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: '1 1 180px' }}>
                 <label className="input-label" style={{ display: 'block', marginBottom: '6px' }}>Period</label>
                 <select className="select-field" value={budgetPeriod} onChange={(e) => setBudgetPeriod(e.target.value)}>
                   <option value="Per day">Per day</option>
