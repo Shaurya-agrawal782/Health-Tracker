@@ -43,6 +43,17 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Public Health Check Route
+app.get('/api/health', (req, res) => {
+  const mongoose = require('mongoose');
+  res.json({
+    status: "ok",
+    service: "VitalIQ Health API",
+    timestamp: new Date().toISOString(),
+    db: mongoose.connection.readyState
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/health', healthRoutes);

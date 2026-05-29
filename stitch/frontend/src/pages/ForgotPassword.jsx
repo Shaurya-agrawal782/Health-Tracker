@@ -15,17 +15,29 @@ const ForgotPassword = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showRetryUI, setShowRetryUI] = useState(false);
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setShowRetryUI(false);
+
+    const timer = setTimeout(() => {
+      setShowRetryUI(true);
+    }, 15000);
+
     try {
       const data = await forgotPassword(email);
       toast.success(data?.message || 'If this email exists, an OTP has been sent.');
       setStep(2);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to send OTP');
+      if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
+        toast.error('Request is taking too long. Please try again.');
+      } else {
+        toast.error(err.response?.data?.message || 'Failed to send OTP');
+      }
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   };
@@ -46,13 +58,24 @@ const ForgotPassword = () => {
     }
 
     setLoading(true);
+    setShowRetryUI(false);
+
+    const timer = setTimeout(() => {
+      setShowRetryUI(true);
+    }, 15000);
+
     try {
       await resetPassword({ email, otp, newPassword });
       toast.success('Password reset successfully!');
       setStep(4);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Reset failed');
+      if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
+        toast.error('Reset is taking too long. Please try again.');
+      } else {
+        toast.error(err.response?.data?.message || 'Reset failed');
+      }
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   };
@@ -106,6 +129,12 @@ const ForgotPassword = () => {
               <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', padding: '14px', fontWeight: 700, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}>
                 {loading ? <span className="spinner" style={{ width: '20px', height: '20px' }} /> : <>Reset Password <FiArrowRight /></>}
               </button>
+
+              {showRetryUI && (
+                <div style={{ marginTop: '12px', padding: '10px 14px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', color: '#b45309', fontSize: '0.85rem', textAlign: 'center', marginBottom: '20px' }}>
+                  Still loading? The server may be waking up. Try again.
+                </div>
+              )}
             </form>
 
             <Link to="/login" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', textDecoration: 'none', fontWeight: 600 }}>
@@ -173,6 +202,12 @@ const ForgotPassword = () => {
               <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', padding: '14px', fontWeight: 700, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 {loading ? <span className="spinner" style={{ width: '20px', height: '20px' }} /> : 'Reset Password'}
               </button>
+
+              {showRetryUI && (
+                <div style={{ marginTop: '12px', padding: '10px 14px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', color: '#b45309', fontSize: '0.85rem', textAlign: 'center' }}>
+                  Still loading? The server may be waking up. Try again.
+                </div>
+              )}
             </form>
           </div>
         )}

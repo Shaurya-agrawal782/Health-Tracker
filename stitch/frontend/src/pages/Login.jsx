@@ -16,6 +16,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
   const [tempAuthData, setTempAuthData] = useState(null);
+  const [showRetryUI, setShowRetryUI] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -25,6 +26,11 @@ const Login = () => {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setShowRetryUI(false);
+
+    const timer = setTimeout(() => {
+      setShowRetryUI(true);
+    }, 15000);
 
     try {
       const data = await login(formData.email, formData.password);
@@ -32,8 +38,13 @@ const Login = () => {
       setShowOtpScreen(true);
       toast.success('Credentials verified! Please enter OTP.');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Invalid credentials');
+      if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
+        toast.error('Login is taking too long. Please try again.');
+      } else {
+        toast.error(err.response?.data?.message || 'Invalid credentials');
+      }
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   };
@@ -293,6 +304,12 @@ const Login = () => {
               <>Sign In <FiArrowRight /></>
             )}
           </button>
+
+          {showRetryUI && (
+            <div style={{ marginTop: '12px', padding: '10px 14px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', color: '#b45309', fontSize: '0.85rem', textAlign: 'center' }}>
+              Still loading? The server may be waking up. Try again.
+            </div>
+          )}
         </form>
 
         {/* Sign up link */}

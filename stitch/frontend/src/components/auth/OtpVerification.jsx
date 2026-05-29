@@ -6,6 +6,7 @@ const OtpVerification = ({ email, onVerify, onBack }) => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(60);
+  const [showRetryUI, setShowRetryUI] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -39,11 +40,22 @@ const OtpVerification = ({ email, onVerify, onBack }) => {
     }
 
     setLoading(true);
+    setShowRetryUI(false);
+
+    const timerId = setTimeout(() => {
+      setShowRetryUI(true);
+    }, 15000);
+
     try {
       await onVerify(otpValue);
     } catch (err) {
-      toast.error(err.message || 'Verification failed');
+      if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
+        toast.error('Verification is taking too long. Please try again.');
+      } else {
+        toast.error(err.response?.data?.message || err.message || 'Verification failed');
+      }
     } finally {
+      clearTimeout(timerId);
       setLoading(false);
     }
   };
@@ -157,6 +169,12 @@ const OtpVerification = ({ email, onVerify, onBack }) => {
             )}
           </p>
         </div>
+
+        {showRetryUI && (
+          <div style={{ marginTop: '12px', padding: '10px 14px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', color: '#b45309', fontSize: '0.85rem', textAlign: 'center', marginBottom: '20px' }}>
+            Still loading? The server may be waking up. Try again.
+          </div>
+        )}
       </form>
 
       <style>{`

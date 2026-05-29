@@ -28,6 +28,14 @@ const buildGuestUser = (id) => ({
 const PendingOtp = require('../models/PendingOtp');
 const { sendOtpEmail } = require('../services/emailService');
 
+const withTimeout = (promise, ms, label = "Operation") =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out`)), ms)
+    )
+  ]);
+
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const hashOtp = async (otp) => bcrypt.hash(String(otp), OTP_SALT_ROUNDS);
@@ -95,12 +103,31 @@ exports.sendRegisterOtp = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Send Email
-    await sendOtpEmail(email, otp);
+    // Check if email config is missing
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error("[AUTH] Registration OTP aborted: Email service is not configured.");
+      return res.status(500).json({ success: false, message: "Email service is not configured." });
+    }
 
-    res.json({ success: true, message: 'OTP sent to email' });
+    // Send Email
+    console.log("[AUTH] Registration OTP email send started");
+    const emailSent = await withTimeout(sendOtpEmail(email, otp), 10000, "Registration OTP email sending");
+    console.log("[AUTH] Registration OTP email send completed");
+
+    if (!emailSent) {
+      return res.status(500).json({ success: false, message: "Registration email could not be sent right now. Please try again in a moment." });
+    }
+
+    return res.json({ success: true, message: 'OTP sent to email' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("[AUTH] Registration OTP error:", error);
+    if (error.message && error.message.includes("timed out")) {
+      return res.status(500).json({
+        success: false,
+        message: "Registration email could not be sent right now. Please try again in a moment."
+      });
+    }
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -162,28 +189,56 @@ exports.login = [
   async (req, res) => {
     try {
       const { email, password } = req.body;
+      console.log("[AUTH] Login request received:", email);
 
+      console.log("[AUTH] User lookup started");
       const user = await User.findOne({ email }).select('+password');
+      console.log("[AUTH] User lookup completed");
+
       if (!user || !(await user.matchPassword(password))) {
         return res.status(401).json({ success: false, message: 'Invalid credentials' });
       }
 
       // Generate 6-digit OTP
+      console.log("[AUTH] OTP generation started");
       const otp = generateOtp();
       user.otp = await hashOtp(otp);
       user.otpExpire = Date.now() + 10 * 60 * 1000; // 10 mins
       await user.save();
 
-      // Send Email
-      await sendOtpEmail(email, otp);
+      // Check if email config is missing
+      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.error("[AUTH] Login OTP aborted: Email service is not configured.");
+        return res.status(500).json({ success: false, message: "Email service is not configured." });
+      }
 
-      res.json({
+      // Send Email
+      console.log("[AUTH] Email send started");
+      const emailSent = await withTimeout(sendOtpEmail(email, otp), 10000, "OTP email sending");
+      console.log("[AUTH] Email send completed");
+
+      if (!emailSent) {
+        return res.status(500).json({
+          success: false,
+          message: "Login email could not be sent right now. Please try again in a moment."
+        });
+      }
+
+      console.log("[AUTH] Login response sent");
+      return res.json({
         success: true,
         message: 'OTP sent to email',
         email: user.email
       });
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      console.error("[AUTH] Login error:", error);
+      if (error.message && error.message.includes("timed out")) {
+        return res.status(500).json({
+          success: false,
+          message: "Login email could not be sent right now. Please try again in a moment."
+        });
+      }
+      return res.status(500).json({ success: false, message: error.message });
     }
   }
 ];
@@ -255,12 +310,34 @@ exports.forgotPassword = async (req, res) => {
     user.otpExpire = Date.now() + 10 * 60 * 1000; // 10 mins
     await user.save();
 
-    // Send Email
-    await sendOtpEmail(email, otp);
+    // Check if email config is missing
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error("[AUTH] Forgot Password OTP aborted: Email service is not configured.");
+      return res.status(500).json({ success: false, message: "Email service is not configured." });
+    }
 
-    res.json(FORGOT_PASSWORD_RESPONSE);
+    // Send Email
+    console.log("[AUTH] Forgot password email send started");
+    const emailSent = await withTimeout(sendOtpEmail(email, otp), 10000, "Forgot password email sending");
+    console.log("[AUTH] Forgot password email send completed");
+
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        message: "Login email could not be sent right now. Please try again in a moment."
+      });
+    }
+
+    return res.json(FORGOT_PASSWORD_RESPONSE);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("[AUTH] Forgot Password error:", error);
+    if (error.message && error.message.includes("timed out")) {
+      return res.status(500).json({
+        success: false,
+        message: "Login email could not be sent right now. Please try again in a moment."
+      });
+    }
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 

@@ -11,6 +11,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
+  const [showRetryUI, setShowRetryUI] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -28,6 +29,11 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setShowRetryUI(false);
+
+    const timer = setTimeout(() => {
+      setShowRetryUI(true);
+    }, 15000);
 
     try {
       // Step 1: Send OTP to verify email
@@ -35,8 +41,13 @@ const Register = () => {
       setShowOtp(true);
       toast.success('Please verify your email to complete registration.');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Verification failed');
+      if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
+        toast.error('Registration is taking too long. Please try again.');
+      } else {
+        toast.error(err.response?.data?.message || 'Verification failed');
+      }
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   };
@@ -201,6 +212,12 @@ const Register = () => {
               'Verify & Create Account'
             )}
           </button>
+
+          {showRetryUI && (
+            <div style={{ marginTop: '12px', padding: '10px 14px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', color: '#b45309', fontSize: '0.85rem', textAlign: 'center' }}>
+              Still loading? The server may be waking up. Try again.
+            </div>
+          )}
         </form>
 
         <p style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
