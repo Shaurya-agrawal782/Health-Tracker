@@ -1,21 +1,27 @@
 const nodemailer = require('nodemailer');
 
-// Reuse transporter across calls for connection pooling
+// Reuse transporter across calls (without pooling for cloud compatibility)
 let cachedTransporter = null;
 
 const getTransporter = () => {
   if (!cachedTransporter) {
     cachedTransporter = nodemailer.createTransport({
-      service: 'gmail',
+      // Use explicit SMTP config instead of 'service: gmail' for
+      // better compatibility with cloud platforms like Render.
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,               // SSL on port 465
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      pool: true,              // Use connection pooling
-      maxConnections: 3,
-      maxMessages: 50,
-      socketTimeout: 15000,    // 15s socket timeout
-      greetingTimeout: 10000,  // 10s greeting timeout
+      // No connection pooling — avoids stale connection issues on
+      // Render/Heroku where instances sleep and connections drop.
+      connectionTimeout: 10000,   // 10s to establish connection
+      greetingTimeout: 10000,     // 10s for SMTP greeting
+      socketTimeout: 15000,       // 15s for socket operations
+      logger: process.env.NODE_ENV !== 'production',   // verbose logs in dev
+      debug: process.env.NODE_ENV !== 'production',
     });
   }
   return cachedTransporter;
@@ -35,7 +41,7 @@ const verifySmtpConnection = async () => {
     console.log('[EMAIL] SMTP connection verified successfully.');
     return true;
   } catch (error) {
-    console.error('[EMAIL] SMTP verification failed:', error.message);
+    console.error('[EMAIL] SMTP verification failed:', error.code, error.message);
     // Reset cached transporter so it can be recreated
     cachedTransporter = null;
     return false;
@@ -79,7 +85,7 @@ const sendOtpEmail = async (email, otp, retries = 2) => {
         console.log(`[EMAIL] Retry attempt ${attempt}/${retries} for ${email}`);
         // Wait briefly before retry (exponential backoff: 1s, 2s)
         await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-        // Reset transporter on retry in case connection went stale
+        // Reset transporter on retry — fresh connection each time
         cachedTransporter = null;
       }
 
@@ -89,17 +95,19 @@ const sendOtpEmail = async (email, otp, retries = 2) => {
       return true;
     } catch (error) {
       lastError = error;
-      console.error(`[EMAIL] Send attempt ${attempt + 1} failed:`, error.message);
+      console.error(`[EMAIL] Send attempt ${attempt + 1} failed:`, error.code, error.message);
 
       // Don't retry on authentication errors — they won't resolve
       if (error.responseCode === 535 || error.code === 'EAUTH') {
-        console.error('[EMAIL] Authentication error — check EMAIL_USER and EMAIL_PASS env vars.');
+        console.error('[EMAIL] Authentication error — check EMAIL_USER and EMAIL_PASS env vars on Render.');
         break;
       }
+      // Reset transporter on any failure
+      cachedTransporter = null;
     }
   }
 
-  console.error('[EMAIL] All send attempts failed. Last error:', lastError?.message);
+  console.error('[EMAIL] All send attempts failed. Last error:', lastError?.code, lastError?.message);
   return false;
 };
 

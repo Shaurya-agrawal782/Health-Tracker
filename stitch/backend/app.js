@@ -54,6 +54,30 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// SMTP diagnostic endpoint (no email sent — just tests connection)
+app.get('/api/health/smtp', async (req, res) => {
+  const { verifySmtpConnection } = require('./services/emailService');
+  const hasUser = !!process.env.EMAIL_USER;
+  const hasPass = !!process.env.EMAIL_PASS;
+
+  if (!hasUser || !hasPass) {
+    return res.json({
+      status: 'not_configured',
+      EMAIL_USER: hasUser ? 'set' : 'MISSING',
+      EMAIL_PASS: hasPass ? 'set' : 'MISSING',
+    });
+  }
+
+  const smtpOk = await verifySmtpConnection();
+  res.json({
+    status: smtpOk ? 'ok' : 'failed',
+    EMAIL_USER: hasUser ? 'set' : 'MISSING',
+    EMAIL_PASS: hasPass ? 'set' : 'MISSING',
+    smtp_connection: smtpOk ? 'verified' : 'failed',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/health', healthRoutes);
