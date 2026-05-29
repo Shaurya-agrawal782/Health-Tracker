@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FiMail, FiLock, FiArrowRight, FiArrowLeft, FiCheckCircle } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import OtpVerification from '../components/auth/OtpVerification';
+import { authAPI } from '../services/api';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -17,6 +18,23 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [showRetryUI, setShowRetryUI] = useState(false);
   const [emailError, setEmailError] = useState(null);
+  const [serverStatus, setServerStatus] = useState('pending');
+
+  useEffect(() => {
+    let active = true;
+    authAPI.checkHealth()
+      .then(() => {
+        if (active) setServerStatus('ready');
+      })
+      .catch((err) => {
+        console.error('Health check connection failed:', err);
+        if (active) setServerStatus('failed');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
@@ -115,6 +133,36 @@ const ForgotPassword = () => {
               <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                 No worries, we'll send you reset instructions.
               </p>
+            </div>
+
+            {/* Server Connection Status Banner */}
+            <div style={{
+              margin: '-16px auto 24px auto',
+              padding: '6px 12px',
+              borderRadius: '12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              width: '100%',
+              background: serverStatus === 'ready' ? '#f0fdf4' : serverStatus === 'failed' ? '#fff1f2' : '#f8fafc',
+              border: `1px solid ${serverStatus === 'ready' ? '#d1fae5' : serverStatus === 'failed' ? '#ffe4e6' : '#e2e8f0'}`,
+              color: serverStatus === 'ready' ? '#166534' : serverStatus === 'failed' ? '#991b1b' : '#64748b',
+              transition: 'all 0.3s'
+            }}>
+              <span style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: serverStatus === 'ready' ? '#22c55e' : serverStatus === 'failed' ? '#ef4444' : '#94a3b8'
+              }} />
+              <span>
+                {serverStatus === 'pending' && 'Waking up secure server...'}
+                {serverStatus === 'ready' && 'Server ready'}
+                {serverStatus === 'failed' && 'Server is taking longer than usual. You can still try.'}
+              </span>
             </div>
 
             <form onSubmit={handleEmailSubmit}>
