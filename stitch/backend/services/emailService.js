@@ -1,14 +1,55 @@
 const nodemailer = require('nodemailer');
 
-const sendOtpEmail = async (email, otp) => {
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+// Reuse transporter across calls for connection pooling
+let cachedTransporter = null;
 
+const getTransporter = () => {
+  if (!cachedTransporter) {
+    cachedTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      pool: true,              // Use connection pooling
+      maxConnections: 3,
+      maxMessages: 50,
+      socketTimeout: 15000,    // 15s socket timeout
+      greetingTimeout: 10000,  // 10s greeting timeout
+    });
+  }
+  return cachedTransporter;
+};
+
+/**
+ * Verify SMTP connection is working. Called on server startup.
+ */
+const verifySmtpConnection = async () => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn('[EMAIL] Email credentials not configured. OTP emails will not be sent.');
+    return false;
+  }
+  try {
+    const transporter = getTransporter();
+    await transporter.verify();
+    console.log('[EMAIL] SMTP connection verified successfully.');
+    return true;
+  } catch (error) {
+    console.error('[EMAIL] SMTP verification failed:', error.message);
+    // Reset cached transporter so it can be recreated
+    cachedTransporter = null;
+    return false;
+  }
+};
+
+/**
+ * Send OTP email with retry logic for transient failures.
+ * @param {string} email - Recipient email
+ * @param {string} otp - OTP code
+ * @param {number} retries - Number of retry attempts (default 2)
+ * @returns {boolean} true if sent successfully
+ */
+const sendOtpEmail = async (email, otp, retries = 2) => {
   const mailOptions = {
     from: `"VitalIQ Health" <${process.env.EMAIL_USER}>`,
     to: email,
@@ -25,18 +66,41 @@ const sendOtpEmail = async (email, otp) => {
         </div>
         <p style="font-size: 14px; color: #64748b; text-align: center;">This code will expire in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #94a3b8; text-align: center;">© 2026 VitalIQ Health. AI-Assisted Wellness Risk Screening Platform.</p>
+        <p style="font-size: 12px; color: #94a3b8; text-align: center;">© 2026 VitalIQ Health. AI-Assisted Wellness Platform.</p>
       </div>
     `,
   };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    return true;
-  } catch (error) {
-    console.error('Email send error:', error);
-    return false;
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      if (attempt > 0) {
+        console.log(`[EMAIL] Retry attempt ${attempt}/${retries} for ${email}`);
+        // Wait briefly before retry (exponential backoff: 1s, 2s)
+        await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+        // Reset transporter on retry in case connection went stale
+        cachedTransporter = null;
+      }
+
+      const transporter = getTransporter();
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`[EMAIL] OTP sent successfully to ${email} (messageId: ${info.messageId})`);
+      return true;
+    } catch (error) {
+      lastError = error;
+      console.error(`[EMAIL] Send attempt ${attempt + 1} failed:`, error.message);
+
+      // Don't retry on authentication errors — they won't resolve
+      if (error.responseCode === 535 || error.code === 'EAUTH') {
+        console.error('[EMAIL] Authentication error — check EMAIL_USER and EMAIL_PASS env vars.');
+        break;
+      }
+    }
   }
+
+  console.error('[EMAIL] All send attempts failed. Last error:', lastError?.message);
+  return false;
 };
 
-module.exports = { sendOtpEmail };
+module.exports = { sendOtpEmail, verifySmtpConnection };

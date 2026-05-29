@@ -39,6 +39,7 @@ const Register = () => {
     height: '',
     weight: ''
   });
+  const [emailError, setEmailError] = useState(null);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -48,6 +49,7 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
     setShowRetryUI(false);
+    setEmailError(null);
 
     const timer = setTimeout(() => {
       setShowRetryUI(true);
@@ -59,10 +61,16 @@ const Register = () => {
       setShowOtp(true);
       toast.success('Please verify your email to complete registration.');
     } catch (err) {
-      if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
-        toast.error('Registration is taking too long. Please try again.');
+      const errorType = err.response?.data?.errorType;
+      const message = err.response?.data?.message;
+
+      if (errorType === 'email_failure' || errorType === 'email_timeout') {
+        setEmailError(message || "We couldn't send your verification email. Please try again.");
+        toast.error('Email delivery failed. See details below.');
+      } else if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
+        toast.error('Registration is taking too long. The server may still be waking up — please try again.');
       } else {
-        toast.error(err.response?.data?.message || 'Verification failed');
+        toast.error(message || 'Verification failed');
       }
     } finally {
       clearTimeout(timer);
@@ -264,6 +272,43 @@ const Register = () => {
           {showRetryUI && (
             <div style={{ marginTop: '12px', padding: '10px 14px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', color: '#b45309', fontSize: '0.85rem', textAlign: 'center' }}>
               Still loading? The server may be waking up. Try again.
+            </div>
+          )}
+
+          {emailError && !loading && (
+            <div style={{
+              marginTop: '12px',
+              padding: '14px 16px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '12px',
+              color: '#991b1b',
+              fontSize: '0.85rem',
+              textAlign: 'center',
+              lineHeight: 1.5
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: '6px' }}>
+                📧 Email delivery issue
+              </div>
+              <div style={{ color: '#b91c1c', marginBottom: '10px' }}>
+                {emailError}
+              </div>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                style={{
+                  padding: '8px 20px',
+                  background: '#0d9488',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Try Again
+              </button>
             </div>
           )}
         </form>

@@ -15,13 +15,19 @@ if (missingOptional.length > 0) {
 
 const app = require('./app');
 const connectDB = require('./config/db');
+const { verifySmtpConnection } = require('./services/emailService');
 
 const PORT = process.env.PORT || 5000;
 
 // Connect to database then start server
 connectDB().then(() => {
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     console.log(`🚀 VitalIQ Health API running on port ${PORT}`);
     console.log(`📍 http://localhost:${PORT}/api/ping`);
+
+    // Verify SMTP connection in background (non-blocking)
+    verifySmtpConnection().catch(() => {
+      console.warn('⚠️ SMTP verification failed — email sending may not work.');
+    });
   });
 });

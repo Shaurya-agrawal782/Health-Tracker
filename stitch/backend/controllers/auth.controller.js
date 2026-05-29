@@ -111,11 +111,11 @@ exports.sendRegisterOtp = async (req, res) => {
 
     // Send Email
     console.log("[AUTH] Registration OTP email send started");
-    const emailSent = await withTimeout(sendOtpEmail(email, otp), 10000, "Registration OTP email sending");
+    const emailSent = await withTimeout(sendOtpEmail(email, otp), 20000, "Registration OTP email sending");
     console.log("[AUTH] Registration OTP email send completed");
 
     if (!emailSent) {
-      return res.status(500).json({ success: false, message: "Registration email could not be sent right now. Please try again in a moment." });
+      return res.status(500).json({ success: false, message: "We couldn't send your verification email right now. Please wait a moment and try again.", errorType: "email_failure" });
     }
 
     return res.json({ success: true, message: 'OTP sent to email' });
@@ -124,7 +124,8 @@ exports.sendRegisterOtp = async (req, res) => {
     if (error.message && error.message.includes("timed out")) {
       return res.status(500).json({
         success: false,
-        message: "Registration email could not be sent right now. Please try again in a moment."
+        message: "The email server is slow right now. Please wait a moment and try again.",
+        errorType: "email_timeout"
       });
     }
     return res.status(500).json({ success: false, message: error.message });
@@ -214,13 +215,14 @@ exports.login = [
 
       // Send Email
       console.log("[AUTH] Email send started");
-      const emailSent = await withTimeout(sendOtpEmail(email, otp), 10000, "OTP email sending");
+      const emailSent = await withTimeout(sendOtpEmail(email, otp), 20000, "OTP email sending");
       console.log("[AUTH] Email send completed");
 
       if (!emailSent) {
         return res.status(500).json({
           success: false,
-          message: "Login email could not be sent right now. Please try again in a moment."
+          message: "We couldn't send your verification email right now. Please wait a moment and try again.",
+          errorType: "email_failure"
         });
       }
 
@@ -235,7 +237,8 @@ exports.login = [
       if (error.message && error.message.includes("timed out")) {
         return res.status(500).json({
           success: false,
-          message: "Login email could not be sent right now. Please try again in a moment."
+          message: "The email server is slow right now. Please wait a moment and try again.",
+          errorType: "email_timeout"
         });
       }
       return res.status(500).json({ success: false, message: error.message });
@@ -318,13 +321,14 @@ exports.forgotPassword = async (req, res) => {
 
     // Send Email
     console.log("[AUTH] Forgot password email send started");
-    const emailSent = await withTimeout(sendOtpEmail(email, otp), 10000, "Forgot password email sending");
+    const emailSent = await withTimeout(sendOtpEmail(email, otp), 20000, "Forgot password email sending");
     console.log("[AUTH] Forgot password email send completed");
 
     if (!emailSent) {
       return res.status(500).json({
         success: false,
-        message: "Login email could not be sent right now. Please try again in a moment."
+        message: "We couldn't send the reset email right now. Please wait a moment and try again.",
+        errorType: "email_failure"
       });
     }
 
@@ -334,7 +338,8 @@ exports.forgotPassword = async (req, res) => {
     if (error.message && error.message.includes("timed out")) {
       return res.status(500).json({
         success: false,
-        message: "Login email could not be sent right now. Please try again in a moment."
+        message: "The email server is slow right now. Please wait a moment and try again.",
+        errorType: "email_timeout"
       });
     }
     return res.status(500).json({ success: false, message: error.message });
