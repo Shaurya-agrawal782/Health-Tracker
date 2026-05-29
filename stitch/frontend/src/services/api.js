@@ -51,6 +51,7 @@ API.interceptors.response.use(
 
 // Auth APIs
 export const authAPI = {
+  checkHealth: () => API.get('/health'),
   register: (data) => API.post('/auth/register', data),
   sendRegisterOtp: (data) => API.post('/auth/send-register-otp', data),
   guestLogin: () => API.post('/auth/guest'),
