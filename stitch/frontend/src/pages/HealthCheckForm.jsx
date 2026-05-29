@@ -354,7 +354,7 @@ const HealthCheckForm = () => {
 
       navigate('/analyzing', { state: { predictionId, formData: payload } });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Screening failed. Please try again.');
+      toast.error(err.response?.data?.message || 'We couldn’t create your estimate right now. Please review your inputs and try again.');
       setLoading(false);
     }
   };
@@ -536,7 +536,7 @@ const HealthCheckForm = () => {
               </>
             ) : (
               <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>
-                We calculate BMI automatically, so you don’t need to know it. Just provide height and weight.
+                Height and weight are needed to calculate BMI. We calculate BMI automatically, so you don’t need to know it.
               </span>
             )}
           </div>
@@ -628,7 +628,7 @@ const HealthCheckForm = () => {
       <SectionTitle
         icon={<FiHeart size={18} color="var(--primary)" />}
         title="Optional Health Metrics"
-        subtitle="Provide advanced metrics if you know them. You can skip this step entirely."
+        subtitle="Provide advanced metrics if you know them. If you don't know these values, you can skip them."
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
@@ -697,7 +697,7 @@ const HealthCheckForm = () => {
               ))}
             </div>
             {bpOption?.value === 'Exact' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+              <div className="bp-inputs-grid" style={{ marginTop: '12px' }}>
                 <div>
                   <label className="input-label" style={{ display: 'block', marginBottom: '4px' }}>Systolic (top number)</label>
                   <input
@@ -759,7 +759,7 @@ const HealthCheckForm = () => {
           </div>
 
           {/* Smoking & Alcohol */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="smoking-alcohol-grid">
             {[
               { label: 'Do you smoke?',        value: smoking, setter: setSmoking },
               { label: 'Do you drink alcohol?',value: alcohol, setter: setAlcohol },
@@ -1034,6 +1034,16 @@ const HealthCheckForm = () => {
         .mobile-indicator {
           display: none;
         }
+        .smoking-alcohol-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .bp-inputs-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
 
         @media (max-width: 600px) {
           .desktop-indicator {
@@ -1049,6 +1059,14 @@ const HealthCheckForm = () => {
           .hcf-btn-container {
             margin-top: 16px !important;
             padding: 0 4px !important;
+          }
+          .smoking-alcohol-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          .bp-inputs-grid {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
           }
         }
       `}</style>

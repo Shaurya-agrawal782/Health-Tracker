@@ -13,7 +13,7 @@ const RiskGauge = ({ score, level, explanation }) => {
   return (
     <div className="medical-card" style={{ padding: '24px', textAlign: 'center' }}>
       <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '16px' }}>
-        Wellness Risk Estimate
+        Wellness Estimate
       </h3>
 
       <div className="circular-progress" style={{ width: '120px', height: '120px', margin: '0 auto 16px' }}>
@@ -31,7 +31,7 @@ const RiskGauge = ({ score, level, explanation }) => {
       <span className={`badge risk-${level.toLowerCase()}`} style={{
         padding: '6px 16px', fontSize: '0.85rem', fontWeight: 600
       }}>
-        {level} Risk
+        {level} Attention
       </span>
 
       {explanation && (

@@ -129,7 +129,7 @@ const Privacy = () => {
             VitalIQ Health is a wellness awareness platform — not a medical service.
           </p>
           <p style={{ fontSize: '0.88rem', color: '#047857', lineHeight: 1.7, margin: 0 }}>
-            It provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice.
+            It provides wellness insights and lifestyle wellness estimates only. It does not diagnose, treat, cure, or replace professional medical advice.
             For medical concerns, consult a qualified healthcare professional.
           </p>
         </div>
@@ -176,7 +176,7 @@ const Privacy = () => {
             {hasGuestData ? (
               <div>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
-                  As a guest, your wellness screenings, preferences, weekly reflections, and habit history are stored directly in your browser's local storage. You can delete all this data at any time.
+                  As a guest, your progress is saved on this device only. You can clear guest data anytime from this device.
                 </p>
                 <button
                   onClick={handleClearGuestData}

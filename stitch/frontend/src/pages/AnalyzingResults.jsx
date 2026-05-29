@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const statusMessages = [
-  'Preparing health data...',
-  'Analyzing vitals...',
-  'Screening diabetes risk signals...',
-  'Checking blood pressure risk...',
-  'Evaluating stress levels...',
-  'Computing SHAP explanations...',
-  'Generating recommendations...',
-  'Finalizing results...'
+  'Creating your wellness estimate...',
+  'Reviewing your routine and lifestyle inputs...',
+  'Checking sleep patterns...',
+  'Evaluating budget and diet goals...',
+  'Analyzing daily activity habits...',
+  'Generating personalized recommendations...',
+  'Finalizing your wellness summary...'
 ];
 
 const AnalyzingResults = () => {
@@ -144,7 +143,7 @@ const AnalyzingResults = () => {
           fontSize: '0.85rem',
           color: 'var(--text-muted)'
         }}>
-          Please wait while our AI processes your data
+          Please wait while we prepare your lifestyle estimate
         </p>
       </div>
 

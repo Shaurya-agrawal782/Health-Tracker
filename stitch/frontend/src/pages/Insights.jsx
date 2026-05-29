@@ -131,7 +131,7 @@ const Insights = () => {
 
     if (results.diabetes === 1) {
       factors.push({
-        factor: 'Elevated Glucose Risk Signal',
+        factor: 'Elevated Glucose Wellness Signal',
         impact: '+30%',
         detail: `Glucose level ${input.glucose || 'N/A'} mg/dL is above the reference range used for this lifestyle screening. BMI and family history may contribute.`,
         severity: 'high'
@@ -142,7 +142,7 @@ const Insights = () => {
       factors.push({
         factor: 'Elevated Blood Pressure Signal',
         impact: '+25%',
-        detail: `Salt intake and stress levels are associated with elevated wellness risk in this screening.`,
+        detail: `Salt intake and stress levels are associated with elevated wellness patterns in this screening.`,
         severity: 'high'
       });
     }
@@ -331,7 +331,7 @@ const Insights = () => {
           }}>
             <FiInfo color="var(--primary)" />
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              <strong style={{ color: 'var(--primary)' }}>Explainable screening:</strong> Each factor shows how it may influence your wellness risk estimate.
+              <strong style={{ color: 'var(--primary)' }}>Explainable screening:</strong> Each factor shows how it may influence your wellness estimate.
             </span>
           </div>
 
@@ -383,7 +383,7 @@ const Insights = () => {
               Personalized Recommendations 💡
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-              Actionable steps based on your lifestyle risk signals — updated after every screening.
+              Actionable steps based on your lifestyle wellness signals — updated after every screening.
             </p>
           </div>
 

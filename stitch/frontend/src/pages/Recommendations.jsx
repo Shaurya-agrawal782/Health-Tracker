@@ -184,10 +184,22 @@ const Recommendations = () => {
     return allRecommendations.filter(r => r.category === selectedCategory);
   }, [allRecommendations, selectedCategory]);
 
+  const prefs = useMemo(() => {
+    const data = gatherRecommendationData(user);
+    return data.preferences || {};
+  }, [user]);
+  const onboardingCompleted = prefs.onboardingCompleted;
+
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '16px' }}>
         <div className="spinner" />
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          Preparing smart recommendations...
+        </h3>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+          Using your goals, habits, and recent check-ins.
+        </p>
       </div>
     );
   }
@@ -230,7 +242,16 @@ const Recommendations = () => {
       </div>
 
       {/* Recommendations Content Panel */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      {!onboardingCompleted ? (
+        <EmptyState
+          title="VitalIQ gets smarter as you add routine data"
+          description="Complete onboarding, a wellness check, or a weekly check-in to get more personalized suggestions."
+          icon="💡"
+          primaryActionLabel="Personalize My Plan"
+          primaryActionTo="/onboarding"
+        />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
           
           {/* Focus Area Panel */}
           <div className="medical-card" style={{
@@ -308,107 +329,116 @@ const Recommendations = () => {
           </div>
 
           {/* Grid Layout of Recommendations */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '20px'
-          }} className="stagger-children">
-            {filteredRecs.map((rec) => {
-              const p = priorityConfig[rec.priority] || priorityConfig.low;
-              return (
-                <div key={rec.id} className="medical-card animate-fade-in-up" style={{
-                  padding: '24px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  background: 'white'
-                }}>
-                  <div>
-                    {/* Header line */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '14px' }}>
-                      <span style={{ fontSize: '1.8rem', lineHeight: 1 }}>{rec.icon}</span>
-                      <span style={{
-                        padding: '3px 10px',
-                        borderRadius: '12px',
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        background: p.bg,
-                        color: p.color,
-                        border: `1px solid ${p.border}`,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.02em'
-                      }}>
-                        {rec.priority}
-                      </span>
-                    </div>
-
-                    <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px', lineHeight: 1.4 }}>
-                      {rec.title}
-                    </h3>
-                    
-                    <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '16px' }}>
-                      <strong>Reason: </strong>{rec.reason}
-                    </p>
-
-                    <div style={{
-                      background: '#f8fafc',
-                      borderRadius: '12px',
-                      padding: '14px 16px',
-                      border: '1px solid #f1f5f9',
-                      marginBottom: '16px'
-                    }}>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>
-                        Suggested Action Steps
-                      </span>
-                      <p style={{ fontSize: '0.82rem', color: '#0f172a', lineHeight: 1.5, margin: 0 }}>
-                        {rec.action}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Badges footer */}
-                  <div style={{
+          {filteredRecs.length === 0 ? (
+            <EmptyState
+              title="No recommendations match this filter"
+              description="Try selecting a different filter category above to view lifestyle recommendations."
+              icon="💡"
+            />
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '20px'
+            }} className="stagger-children">
+              {filteredRecs.map((rec) => {
+                const p = priorityConfig[rec.priority] || priorityConfig.low;
+                return (
+                  <div key={rec.id} className="medical-card animate-fade-in-up" style={{
+                    padding: '24px',
                     display: 'flex',
+                    flexDirection: 'column',
                     justifyContent: 'space-between',
-                    alignItems: 'center',
-                    borderTop: '1px solid #f1f5f9',
-                    paddingTop: '12px',
-                    marginTop: '8px'
+                    background: 'white'
                   }}>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <span style={{
-                        background: 'var(--primary-50)',
-                        color: 'var(--primary)',
-                        padding: '2px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.7rem',
-                        fontWeight: 700
+                    <div>
+                      {/* Header line */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '14px' }}>
+                        <span style={{ fontSize: '1.8rem', lineHeight: 1 }}>{rec.icon}</span>
+                        <span style={{
+                          padding: '3px 10px',
+                          borderRadius: '12px',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          background: p.bg,
+                          color: p.color,
+                          border: `1px solid ${p.border}`,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.02em'
+                        }}>
+                          {rec.priority}
+                        </span>
+                      </div>
+
+                      <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px', lineHeight: 1.4 }}>
+                        {rec.title}
+                      </h3>
+                      
+                      <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '16px' }}>
+                        <strong>Reason: </strong>{rec.reason}
+                      </p>
+
+                      <div style={{
+                        background: '#f8fafc',
+                        borderRadius: '12px',
+                        padding: '14px 16px',
+                        border: '1px solid #f1f5f9',
+                        marginBottom: '16px'
                       }}>
-                        {rec.category}
-                      </span>
-                      <span style={{
-                        background: '#f1f5f9',
-                        color: '#64748b',
-                        padding: '2px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}>
-                        <FiClock size={10} /> {rec.estimatedTime}
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>
+                          Suggested Action Steps
+                        </span>
+                        <p style={{ fontSize: '0.82rem', color: '#0f172a', lineHeight: 1.5, margin: 0 }}>
+                          {rec.action}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Badges footer */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      borderTop: '1px solid #f1f5f9',
+                      paddingTop: '12px',
+                      marginTop: '8px'
+                    }}>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <span style={{
+                          background: 'var(--primary-50)',
+                          color: 'var(--primary)',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.7rem',
+                          fontWeight: 700
+                        }}>
+                          {rec.category}
+                        </span>
+                        <span style={{
+                          background: '#f1f5f9',
+                          color: '#64748b',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}>
+                          <FiClock size={10} /> {rec.estimatedTime}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                        via {rec.source}
                       </span>
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                      via {rec.source}
-                    </span>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
+      )}
 
       {/* Safety Disclaimer Wording Box */}
       <div style={{

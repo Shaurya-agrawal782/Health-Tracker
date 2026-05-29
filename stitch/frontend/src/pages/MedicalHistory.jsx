@@ -270,7 +270,8 @@ const MedicalHistory = () => {
 
           {/* Guest Empty State Card */}
           <EmptyState
-            title="Guest results are not saved permanently. Sign in to save your wellness history."
+            title="Sign in to save your wellness history"
+            description="Guest results are not saved permanently. Create an account to track progress across devices."
             icon="🔒"
             primaryActionLabel="Create Account"
             primaryActionTo="/register"
@@ -320,8 +321,9 @@ const MedicalHistory = () => {
 
           {/* Table */}
           {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', gap: '16px' }}>
               <div className="spinner" />
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Retrieving your wellness history...</p>
             </div>
           ) : filteredPredictions.length === 0 ? (
             <EmptyState
@@ -339,7 +341,7 @@ const MedicalHistory = () => {
                     <th>Date</th>
                     <th>Type</th>
                     <th>Summary</th>
-                    <th>Risk</th>
+                    <th>Attention Level</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>

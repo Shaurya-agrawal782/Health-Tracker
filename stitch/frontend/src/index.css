@@ -1249,3 +1249,70 @@ body {
   }
 }
 
+/* Accessibility focus outlines globally */
+button:focus-visible, 
+a:focus-visible, 
+input:focus-visible, 
+select:focus-visible, 
+textarea:focus-visible,
+.drawer-item:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+
+/* Global scroll prevention utility */
+.overflow-x-hidden {
+  overflow-x: hidden !important;
+}
+.max-w-full {
+  max-width: 100% !important;
+}
+
+/* ===== Budget Meal Planner Responsive Passes ===== */
+.meal-welcome-card, .meal-wizard-card {
+  transition: all var(--transition-base);
+}
+
+@media (max-width: 600px) {
+  .meal-welcome-card {
+    padding: 16px !important;
+  }
+  .meal-wizard-card {
+    padding: 20px 16px !important;
+    border-radius: 16px !important;
+  }
+  .meal-chip {
+    min-width: 0 !important;
+    padding: 12px 8px !important;
+    font-size: 0.8rem !important;
+  }
+  .meal-living-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .meal-goal-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .meal-review-grid {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+  .meal-count-grid {
+    gap: 6px !important;
+  }
+  .meal-result-actions {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .meal-result-actions button, .meal-result-actions a {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .meal-result-card {
+    padding: 16px 12px !important;
+    gap: 12px !important;
+  }
+}
+

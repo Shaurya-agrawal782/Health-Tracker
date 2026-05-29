@@ -171,7 +171,7 @@ export const generateSmartRecommendations = (input) => {
           title: 'Take your first wellness check',
           category: 'Consistency',
           reason: 'No baseline physical data is logged.',
-          action: 'Log your baseline vitals to evaluate cardiovascular and lifestyle risk signals.',
+          action: 'Log your baseline vitals to evaluate cardiovascular and lifestyle wellness signals.',
           priority: 'High',
           difficulty: 'Easy',
           estimatedTime: '10 mins',

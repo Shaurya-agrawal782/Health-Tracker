@@ -95,8 +95,8 @@ const Login = () => {
 
   if (showOtpScreen) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: '20px' }}>
-        <div className="animate-fade-in-scale" style={{ background: 'white', borderRadius: '24px', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', padding: '48px 40px', width: '100%', maxWidth: '440px' }}>
+      <div className="auth-outer-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: '20px' }}>
+        <div className="animate-fade-in-scale login-card" style={{ background: 'white', borderRadius: '24px', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', width: '100%', maxWidth: '440px' }}>
           <OtpVerification 
             email={formData.email} 
             onVerify={handleOtpVerify} 
@@ -108,7 +108,7 @@ const Login = () => {
   }
 
   return (
-    <div style={{
+    <div className="auth-outer-container" style={{
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
@@ -116,11 +116,10 @@ const Login = () => {
       background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
       padding: '20px'
     }}>
-      <div className="animate-fade-in-scale" style={{
+      <div className="animate-fade-in-scale login-card" style={{
         background: 'white',
         borderRadius: '24px',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
-        padding: '48px 40px',
         width: '100%',
         maxWidth: '440px'
       }}>
@@ -312,6 +311,21 @@ const Login = () => {
           </Link>
         </p>
       </div>
+      <style>{`
+        .login-card {
+          padding: 48px 40px;
+        }
+        @media (max-width: 600px) {
+          .auth-outer-container {
+            padding: 10px !important;
+          }
+          .login-card {
+            padding: 24px 16px !important;
+            border-radius: 16px !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05) !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

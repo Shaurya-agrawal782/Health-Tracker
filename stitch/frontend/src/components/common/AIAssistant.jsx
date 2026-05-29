@@ -4,14 +4,14 @@ import { healthAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
 const AIAssistant = () => {
-  const disclaimer = 'VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.';
+  const disclaimer = 'VitalIQ Health provides wellness insights and lifestyle wellness estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.';
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hi! I'm VitalIQ, your AI-assisted wellness guide. I can help explain lifestyle trends, wellness risk estimates, and healthier habit ideas."
+      content: "Hi! I'm VitalIQ, your AI-assisted wellness guide. I can help explain lifestyle trends, lifestyle wellness estimates, and healthier habit ideas."
     }
   ]);
   const [loading, setLoading] = useState(false);

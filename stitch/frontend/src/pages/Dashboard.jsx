@@ -448,8 +448,14 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '16px' }}>
         <div className="spinner" />
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          Setting up your wellness dashboard...
+        </h3>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+          Loading daily actions, weekly habits, and recommendations.
+        </p>
       </div>
     );
   }
@@ -693,7 +699,7 @@ const Dashboard = () => {
 
             <div style={{ marginTop: '16px', textAlign: 'center' }}>
               <Link to="/daily-actions" className="btn-ghost" style={{ width: '100%', fontSize: '0.8rem', padding: '8px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                View All Actions <FiArrowRight size={12} />
+                View all actions <FiArrowRight size={12} />
               </Link>
             </div>
           </div>
@@ -950,7 +956,7 @@ const Dashboard = () => {
         <FiShield size={16} style={{ flexShrink: 0, color: 'var(--primary)' }} />
         <span style={{ fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.4 }}>
           <strong>Safety Disclaimer: </strong>
-          VitalIQ Health provides wellness insights, lifestyle risk estimates, and general wellness suggestions only. This platform does not provide medical diagnosis, disease prediction, treatment, or cure. Consult a qualified professional for medical advice.
+          VitalIQ Health provides wellness insights, lifestyle wellness estimates, and general wellness suggestions only. This platform does not provide medical diagnosis, disease prediction, treatment, or cure. Consult a qualified professional for medical advice.
         </span>
       </div>
 
@@ -978,10 +984,10 @@ const Dashboard = () => {
             gap: 16px;
           }
           .dashboard-column-left {
-            gap: 16px;
+            display: contents;
           }
           .dashboard-column-right {
-            gap: 16px;
+            display: contents;
           }
           .card-hero {
             padding: 24px 20px !important;

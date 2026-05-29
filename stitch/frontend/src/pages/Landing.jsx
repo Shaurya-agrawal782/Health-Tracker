@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   FiCheckCircle, FiShoppingBag, FiZap, FiAward,
   FiArrowRight, FiShield, FiTrendingUp, FiActivity,
@@ -7,7 +8,7 @@ import {
 } from 'react-icons/fi';
 
 const disclaimer =
-  'VitalIQ Health provides wellness insights and lifestyle risk estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.';
+  'VitalIQ Health provides wellness insights and lifestyle wellness estimates only. It does not diagnose, treat, cure, or replace professional medical advice. For medical concerns, consult a qualified healthcare professional.';
 
 /* ─── small reusable sub-components ─── */
 
@@ -70,6 +71,22 @@ const StepBubble = ({ num, color }) => (
 /* ─── Main Landing component ─── */
 
 const Landing = () => {
+  const { loginAsGuest } = useAuth();
+  const navigate = useNavigate();
+  const [guestLoading, setGuestLoading] = React.useState(false);
+
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    try {
+      await loginAsGuest();
+      navigate('/dashboard');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGuestLoading(false);
+    }
+  };
+
   return (
     <div style={{ minHeight: '100vh', background: '#ffffff', color: '#0f172a', overflowX: 'hidden' }}>
 
@@ -180,7 +197,7 @@ const Landing = () => {
 
           {/* CTAs */}
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link to="/register" style={{
+            <Link to="/register" className="landing-hero-btn" style={{
               background: 'linear-gradient(135deg, #0d9488, #10b981)',
               color: 'white', textDecoration: 'none', padding: '17px 42px',
               fontSize: '1.05rem', borderRadius: '16px', fontWeight: 700,
@@ -193,7 +210,19 @@ const Landing = () => {
             >
               Start Your Wellness Check — Free <FiArrowRight size={17} />
             </Link>
-            <Link to="/login" style={{
+            <button onClick={handleGuestLogin} disabled={guestLoading} className="landing-hero-btn" style={{
+              background: 'white', color: '#0d9488',
+              padding: '17px 38px', fontSize: '1.05rem', borderRadius: '16px', fontWeight: 700,
+              border: '2px solid #0d9488', cursor: 'pointer',
+              transition: 'all 0.18s',
+              display: 'inline-flex', alignItems: 'center', gap: '8px'
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#f0fdfa'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'white'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              {guestLoading ? 'Starting...' : 'Try as Guest'}
+            </button>
+            <Link to="/login" className="landing-hero-btn" style={{
               background: 'white', color: '#334155', textDecoration: 'none',
               padding: '17px 38px', fontSize: '1.05rem', borderRadius: '16px', fontWeight: 700,
               border: '2px solid #e2e8f0',
@@ -230,7 +259,7 @@ const Landing = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px' }}>
             {[
               { num: 1, color: '#0d9488', icon: FiActivity, title: 'Tell us your routine', desc: 'Share sleep hours, meals, water intake, stress levels, and basic lifestyle details.' },
-              { num: 2, color: '#10b981', icon: FiCheckCircle, title: 'Get wellness insights', desc: 'Receive AI-assisted lifestyle risk estimates and trend feedback instantly.' },
+              { num: 2, color: '#10b981', icon: FiCheckCircle, title: 'Get wellness insights', desc: 'Receive AI-assisted lifestyle wellness estimates and trend feedback instantly.' },
               { num: 3, color: '#f59e0b', icon: FiZap, title: 'Follow daily actions', desc: 'Simple action steps, dietary swaps, and habit suggestions built around your life.' },
               { num: 4, color: '#8b5cf6', icon: FiAward, title: 'Track your progress', desc: 'Build streaks, earn wellness points, and watch your habits improve over time.' },
             ].map(({ num, color, icon: Icon, title, desc }) => (
@@ -282,7 +311,7 @@ const Landing = () => {
               desc="Log your nightly sleep and daily stress levels. See trends and get tailored insights to help you rest and recover better." />
             <FeatureCard icon={FiTrendingUp} color="#0ea5e9" bg="#f0f9ff"
               title="Progress History"
-              desc="View your wellness journey over time with a clean history of past checks, risk estimate changes, and improvement streaks." />
+              desc="View your wellness journey over time with a clean history of past checks, wellness score changes, and improvement streaks." />
             <FeatureCard icon={FiAward} color="#ec4899" bg="#fdf2f8"
               title="Wellness Streaks"
               desc="Earn wellness points for consistent daily logging. Celebrate consistency with the VitalIQ community using privacy-safe display names." />
@@ -351,7 +380,7 @@ const Landing = () => {
             Free to use. No medical reports needed. Just your daily routine — and we'll help you understand it better.
           </p>
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link to="/register" style={{
+            <Link to="/register" className="landing-cta-btn" style={{
               background: 'white', color: '#064e3b', textDecoration: 'none',
               padding: '15px 38px', fontSize: '1rem', borderRadius: '14px', fontWeight: 800,
               boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
@@ -362,7 +391,7 @@ const Landing = () => {
             >
               Create Free Account <FiArrowRight />
             </Link>
-            <Link to="/health-check" style={{
+            <Link to="/health-check" className="landing-cta-btn" style={{
               background: 'rgba(255,255,255,0.15)', color: 'white', textDecoration: 'none',
               padding: '15px 38px', fontSize: '1rem', borderRadius: '14px', fontWeight: 700,
               border: '1.5px solid rgba(255,255,255,0.3)',
@@ -423,6 +452,11 @@ const Landing = () => {
           .landing-hero-sec p {
             font-size: 0.95rem !important;
             margin-bottom: 24px !important;
+          }
+          .landing-hero-btn, .landing-cta-btn {
+            width: 100% !important;
+            justify-content: center !important;
+            box-sizing: border-box !important;
           }
           .landing-cta-sec {
             padding: 32px 16px !important;

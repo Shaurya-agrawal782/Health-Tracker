@@ -405,16 +405,34 @@ const DashboardLayout = () => {
                 { path: '/leaderboard',     label: 'Streaks',          icon: <FiAward size={18} /> },
                 { path: '/profile',         label: 'Profile',          icon: <FiUser size={18} /> },
                 { path: '/privacy',         label: 'Privacy',          icon: <FiShield size={18} /> },
+                { isAction: true,           label: 'Sign Out',         icon: <FiLogOut size={18} />, onClick: () => { logout(); setShowMoreMenu(false); } }
               ].map(item => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`drawer-item ${location.pathname === item.path ? 'active' : ''}`}
-                  onClick={() => setShowMoreMenu(false)}
-                >
-                  <span className="drawer-item-icon">{item.icon}</span>
-                  <span>{item.label}</span>
-                </Link>
+                item.isAction ? (
+                  <button
+                    key={item.label}
+                    onClick={item.onClick}
+                    className="drawer-item"
+                    style={{
+                      border: '1px solid #fee2e2',
+                      background: '#fff5f5',
+                      color: '#ef4444',
+                      width: '100%'
+                    }}
+                  >
+                    <span className="drawer-item-icon" style={{ background: '#fef2f2', color: '#ef4444' }}>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ) : (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`drawer-item ${location.pathname === item.path ? 'active' : ''}`}
+                    onClick={() => setShowMoreMenu(false)}
+                  >
+                    <span className="drawer-item-icon">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                )
               ))}
             </div>
           </div>

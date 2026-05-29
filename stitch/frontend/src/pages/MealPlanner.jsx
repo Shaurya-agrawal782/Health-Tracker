@@ -235,10 +235,10 @@ const MealPlanner = () => {
   useEffect(() => {
     if (!loading) return;
     const messages = [
-      'Finding affordable meals for you… 🍽️',
-      'Checking local food prices… 💰',
-      'Building your personalized plan… 📝',
-      'Almost there, optimizing for your budget… ✨',
+      'Building your budget meal plan...',
+      'Checking your budget, food preference, and cooking access.',
+      'Finding affordable local ingredients...',
+      'Almost there, optimizing for your budget...',
     ];
     let idx = 0;
     setLoadingMessage(messages[0]);
@@ -273,7 +273,7 @@ const MealPlanner = () => {
         setMealPlan(res.data.data);
       } else {
         // API returned failure — use local fallback
-        toast('Using offline meal suggestions.', { icon: '📴' });
+        toast.error("We couldn’t generate an AI meal plan right now, so we created a simple fallback plan.");
         const fallback = generateLocalFallback(
           foodPreference || 'Vegetarian',
           budgetAmount,
@@ -285,7 +285,7 @@ const MealPlanner = () => {
       }
     } catch (err) {
       console.error('Meal plan API failed:', err);
-      toast('Using offline meal suggestions.', { icon: '📴' });
+      toast.error("We couldn’t generate an AI meal plan right now, so we created a simple fallback plan.");
       const fallback = generateLocalFallback(
         foodPreference || 'Vegetarian',
         budgetAmount,
@@ -562,7 +562,7 @@ const MealPlanner = () => {
                 )}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }} className="meal-result-actions">
               <button
                 onClick={() => { setMealPlan(null); setWizardStep(1); }}
                 className="btn-ghost"
@@ -584,7 +584,7 @@ const MealPlanner = () => {
         {/* Meal Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
           {mealsList.map((meal, idx) => (
-            <div key={idx} style={{
+            <div key={idx} className="meal-result-card" style={{
               ...cardStyle,
               padding: '20px 24px',
               display: 'flex',
@@ -741,7 +741,7 @@ const MealPlanner = () => {
           </p>
         </div>
 
-        <div style={{ ...cardStyle, padding: '28px', marginBottom: '24px' }}>
+        <div style={{ ...cardStyle, padding: '28px', marginBottom: '24px' }} className="meal-welcome-card">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {[
               { icon: '💰', text: 'Works even on a low budget (₹80/day)' },
@@ -822,7 +822,7 @@ const MealPlanner = () => {
 
       {renderProgress()}
 
-      <div style={cardStyle}>
+      <div style={cardStyle} className="meal-wizard-card">
         {/* ─── Step 1: Budget ───────────────────────────────────────────────── */}
         {wizardStep === 1 && (
           <div className="animate-fade-in">
@@ -831,13 +831,14 @@ const MealPlanner = () => {
               {initialPrefs.budgetAmount && prefillBadge}
             </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }} className="meal-budget-grid">
               {budgetChips.map(chip => (
                 <button
                   key={chip.value}
                   type="button"
                   onClick={() => { setBudgetAmount(chip.value); setBudgetPeriod(chip.period); }}
                   style={bigChipStyle(budgetAmount === chip.value && budgetPeriod === chip.period)}
+                  className="meal-chip"
                 >
                   <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{chip.label}</span>
                   <span style={{ fontSize: '0.72rem', opacity: 0.7, fontWeight: 500 }}>{chip.desc}</span>
@@ -856,6 +857,11 @@ const MealPlanner = () => {
                   onChange={(e) => setBudgetAmount(e.target.value)}
                   style={{ width: '100%' }}
                 />
+                {budgetAmount !== '' && Number(budgetAmount) <= 0 && (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--accent-coral)', display: 'block', marginTop: '4px', fontWeight: 600 }}>
+                    Please enter a valid budget amount.
+                  </span>
+                )}
               </div>
               <div style={{ flex: '1 1 150px' }}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Period</label>
@@ -876,7 +882,12 @@ const MealPlanner = () => {
               <button onClick={() => setWizardStep(0)} className="btn-ghost" style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <FiArrowLeft size={14} /> Back
               </button>
-              <button onClick={() => setWizardStep(2)} className="btn-primary" style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button 
+                onClick={() => setWizardStep(2)} 
+                className="btn-primary" 
+                disabled={budgetAmount !== '' && Number(budgetAmount) <= 0}
+                style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '6px', opacity: (budgetAmount !== '' && Number(budgetAmount) <= 0) ? 0.5 : 1, cursor: (budgetAmount !== '' && Number(budgetAmount) <= 0) ? 'not-allowed' : 'pointer' }}
+              >
                 Next <FiArrowRight size={14} />
               </button>
             </div>
@@ -891,13 +902,14 @@ const MealPlanner = () => {
               {initialPrefs.foodPreference && prefillBadge}
             </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }} className="meal-food-grid">
               {foodOptions.map(opt => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setFoodPreference(opt.value)}
                   style={bigChipStyle(foodPreference === opt.value)}
+                  className="meal-chip"
                 >
                   <span style={{ fontSize: '1.6rem' }}>{opt.icon}</span>
                   <span>{opt.label}</span>
@@ -941,13 +953,14 @@ const MealPlanner = () => {
               {initialPrefs.livingType && prefillBadge}
             </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '24px' }} className="meal-living-grid">
               {livingOptions.map(opt => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setLivingType(opt.value)}
                   style={chipStyle(livingType === opt.value)}
+                  className="meal-chip"
                 >
                   <span style={{ fontSize: '1.3rem' }}>{opt.icon}</span>
                   <span style={{ fontSize: '0.78rem' }}>{opt.label}</span>
@@ -960,13 +973,14 @@ const MealPlanner = () => {
               {initialPrefs.cookingAccess && prefillBadge}
             </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '24px' }} className="meal-cooking-grid">
               {cookingOptions.map(opt => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setCookingAccess(opt.value)}
                   style={chipStyle(cookingAccess === opt.value)}
+                  className="meal-chip"
                 >
                   <span style={{ fontSize: '1.2rem' }}>{opt.icon}</span>
                   <span style={{ fontSize: '0.78rem' }}>{opt.label}</span>
@@ -1021,13 +1035,14 @@ const MealPlanner = () => {
           <div className="animate-fade-in">
             <label style={stepLabelStyle}>What's your food goal?</label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '24px' }} className="meal-goal-grid">
               {goalOptions.map(opt => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setWellnessGoal(opt.value)}
                   style={chipStyle(wellnessGoal === opt.value)}
+                  className="meal-chip"
                 >
                   <span style={{ fontSize: '0.78rem' }}>{opt.label}</span>
                 </button>
@@ -1037,7 +1052,7 @@ const MealPlanner = () => {
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginBottom: '8px' }}>
               Meals per day
             </label>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '28px' }}>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '28px' }} className="meal-count-grid">
               {[3, 4, 5].map(n => (
                 <button
                   key={n}
@@ -1048,6 +1063,7 @@ const MealPlanner = () => {
                     flex: 1,
                     padding: '12px 8px',
                   }}
+                  className="meal-chip"
                 >
                   <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{n}</span>
                   <span style={{ fontSize: '0.72rem', opacity: 0.7 }}>meals</span>
@@ -1066,7 +1082,7 @@ const MealPlanner = () => {
               <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Review Your Choices
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.83rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.83rem' }} className="meal-review-grid">
                 <div><span style={{ color: '#94a3b8' }}>Budget:</span> <strong>{budgetAmount ? `₹${budgetAmount} ${budgetPeriod?.toLowerCase()}` : 'Auto (low budget)'}</strong></div>
                 <div><span style={{ color: '#94a3b8' }}>Food:</span> <strong>{foodPreference || 'Vegetarian'}</strong></div>
                 <div><span style={{ color: '#94a3b8' }}>Living:</span> <strong>{livingType || 'Home'}</strong></div>

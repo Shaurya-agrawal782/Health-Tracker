@@ -320,6 +320,32 @@ const WeeklyCheckin = () => {
     }
   };
 
+  // Submission Loading Card
+  if (isSubmitting) {
+    return (
+      <div style={{
+        minHeight: '60vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'white',
+        borderRadius: '24px',
+        padding: '40px',
+        textAlign: 'center',
+        gap: '20px'
+      }} className="page-enter">
+        <div className="spinner" style={{ width: '60px', height: '60px', borderWidth: '5px' }} />
+        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: '12px 0 4px 0' }}>
+          Analyzing your weekly check-in...
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '360px', lineHeight: 1.5, margin: 0 }}>
+          Calculating consistency, updating wellness trends, and preparing smart lifestyle adjustments.
+        </p>
+      </div>
+    );
+  }
+
   // Render Submission Result Card
   if (submittedCheckin) {
     const statusStyle = getStatusStyles(submittedCheckin.status);
@@ -408,7 +434,7 @@ const WeeklyCheckin = () => {
           )}
 
           {/* Buttons Footer */}
-          <div style={{ display: 'flex', gap: '16px', width: '100%', marginTop: '12px' }}>
+          <div style={{ display: 'flex', gap: '16px', width: '100%', marginTop: '12px' }} className="weekly-results-buttons">
             <button
               onClick={() => navigate('/dashboard')}
               className="btn-primary"
@@ -513,7 +539,7 @@ const WeeklyCheckin = () => {
                 }}>
                   {isCompleted ? '✓' : idx + 1}
                 </span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }} className="dash-welcome-text">
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }} className="weekly-step-title">
                   {step.title}
                 </span>
               </div>
@@ -523,7 +549,7 @@ const WeeklyCheckin = () => {
       </div>
 
       {/* Reflection Step Form Card */}
-      <form onSubmit={handleSubmit} className="medical-card" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <form onSubmit={handleSubmit} className="medical-card weekly-card-form" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
         
         {/* Step 1: Sleep & Energy */}
         {currentStep === 0 && (
@@ -761,6 +787,27 @@ const WeeklyCheckin = () => {
       </div>
 
       <style>{`
+        .weekly-step-title {
+          display: inline;
+        }
+        @media (max-width: 600px) {
+          .weekly-step-title {
+            display: none !important;
+          }
+          .weekly-results-buttons {
+            flex-direction: column !important;
+            gap: 10px !important;
+          }
+          .weekly-results-buttons button, .weekly-results-buttons a {
+            width: 100% !important;
+            text-align: center !important;
+            justify-content: center !important;
+          }
+          .weekly-card-form {
+            padding: 20px 16px !important;
+            gap: 16px !important;
+          }
+        }
         @media (max-width: 480px) {
           .weekly-btn-group {
             display: grid !important;

@@ -23,7 +23,19 @@ const Leaderboard = () => {
     fetchLeaderboard();
   }, []);
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}><div className="spinner" /></div>;
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '16px' }}>
+        <div className="spinner" />
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          Retrieving leaderboard streaks...
+        </h3>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+          Calculating community consistency rankings.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="page-enter">
@@ -69,7 +81,20 @@ const Leaderboard = () => {
               </tr>
             </thead>
             <tbody>
-              {leaders.map((leader, idx) => (
+              {leaders.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ padding: '40px' }}>
+                    <EmptyState
+                      title="Streak board is currently loading or empty"
+                      description="No consistency data recorded yet. Complete today's wellness check or log your habits to join the board!"
+                      icon="🏆"
+                      primaryActionLabel="Start Wellness Check"
+                      primaryActionTo="/health-check"
+                    />
+                  </td>
+                </tr>
+              ) : (
+                leaders.map((leader, idx) => (
                 <tr key={idx} style={{ 
                   borderBottom: '1px solid #f1f5f9',
                   background: leader.isUser ? '#f0fdfa' : 'transparent',
@@ -111,7 +136,8 @@ const Leaderboard = () => {
                     </span>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>

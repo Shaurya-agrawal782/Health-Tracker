@@ -56,7 +56,10 @@ const Onboarding = () => {
   const isStepValid = () => {
     if (step === 1) return formData.userType && formData.ageGroup;
     if (step === 2) return formData.goals.length > 0;
-    if (step === 3) return formData.foodPreference; // budget is optional
+    if (step === 3) {
+      if (formData.budgetAmount !== '' && Number(formData.budgetAmount) <= 0) return false;
+      return formData.foodPreference; // budget is optional
+    }
     if (step === 4) return formData.livingType && formData.cookingAccess;
     if (step === 5) return formData.sleepTarget && formData.activityLevel && formData.reminderPreference;
     return true;
@@ -280,6 +283,14 @@ const Onboarding = () => {
                     style={{ paddingLeft: '32px' }}
                   />
                 </div>
+                {formData.budgetAmount !== '' && Number(formData.budgetAmount) <= 0 && (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--accent-coral)', display: 'block', marginTop: '4px', fontWeight: 600 }}>
+                    Please enter a valid budget amount.
+                  </span>
+                )}
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+                  Example: ₹150 per day or ₹4500 per month.
+                </span>
               </div>
               <div style={{ flex: '1 1 200px' }}>
                 <label className="input-label" style={{ display: 'block', marginBottom: '6px', fontWeight: 700 }}>Period</label>
@@ -502,6 +513,7 @@ const Onboarding = () => {
           .onboarding-select-btn {
             font-size: 0.85rem !important;
             padding: 10px 12px !important;
+            min-width: 0 !important;
           }
         }
       `}</style>
